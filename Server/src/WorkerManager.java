@@ -18,6 +18,8 @@ public class WorkerManager extends Thread{
         this.articles = searchEngine.getArticles();
     }
 
+
+
     private synchronized void waitingMode() {
         synchronized (searchEngine){
             try {
@@ -45,14 +47,12 @@ public class WorkerManager extends Thread{
             } else {
                 SearchActivity searchActivity = searchActivities.get(activityIndex);
                 if (!searchActivity.isDone()) {
-                    System.out.println("Articles left: " + searchActivity.getArticlesLeft());
-                    ArticleToSearch articleToSearch = new ArticleToSearch(searchActivity.getID(), articles.get(searchActivity.getArticlesLeft()), searchActivity.getFindStr());
+                    int articlesLeft = searchActivity.getArticlesLeft();
+                    System.out.println("Articles left: " + articlesLeft);
+                    ArticleToSearch articleToSearch = new ArticleToSearch(searchActivity.getID(), articlesLeft, articles.get(searchActivity.getArticlesLeft()), searchActivity.getFindStr());
                     searchActivity.searchStarted();
                     worker.sendServerMessage(articleToSearch);
                     System.out.println("Enviado para worker");
-                } else {
-                    searchEngine.searchCompleted(searchActivity);
-                    System.out.println("Search completed");
                 }
                 incrementActivityIndex();
             }

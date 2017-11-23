@@ -68,7 +68,7 @@ public class Worker {
         }
     }
 
-    public void searchArticle(Article article, String findStr, int searchActivityID) {
+    public void searchArticle(Article article, String findStr, int searchActivityID, int articlesLeft) {
         System.out.println("Searching article");
         boolean occurrenceFound = false;
         SearchedArticle searchedArticle = new SearchedArticle(new ArticleTitle(article.getID(), article.getTitle()), searchActivityID);
@@ -96,13 +96,13 @@ public class Worker {
         counter++;
         System.out.println("Searched "+counter+" articles.");
         if (occurrenceFound) {
-            sendResult(searchedArticle, searchActivityID);
+            sendResult(searchedArticle, searchActivityID, articlesLeft);
         }
     }
 
-    public synchronized void sendResult(SearchedArticle searchedArticle, int searchActivityID){
+    public synchronized void sendResult(SearchedArticle searchedArticle, int searchActivityID, int articlesLeft){
         try {
-            out.writeObject(new WorkerResultMessage(searchedArticle, searchActivityID));
+            out.writeObject(new WorkerResultMessage(searchedArticle, searchActivityID, articlesLeft));
             out.flush();
             System.out.println("Worker: object sent");
             counter2++;

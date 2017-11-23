@@ -64,7 +64,7 @@ public class SearchActivity {
             done = true;
     }
 
-    public void searchDone(SearchedArticle searchedArticle) {
+    public synchronized void searchDone(SearchedArticle searchedArticle) {
         counter++;
         System.out.println(counter+" articles returned to id: "+ID);
         if (searchedArticle.getOccurrencesCount() > 0) {

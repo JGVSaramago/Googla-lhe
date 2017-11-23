@@ -2,14 +2,14 @@ import lib.*;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.concurrent.locks.Lock;
 
 public class SearchEngine {
     private int searchActivityIDcounter = 0;
     private ArrayList<Article> articles;
     private ArrayList<SearchActivity> searchActivities;
-    private  ArrayList<SearchActivity> searchesCompleted;
-    private boolean lock = false;
+    private ArrayList<SearchActivity> searchesCompleted;
     private Cleaner cleaner;
 
     public SearchEngine() {
@@ -21,24 +21,9 @@ public class SearchEngine {
         cleaner.start();
     }
 
-    public boolean isLock() {
-        return lock;
-    }
-
-    public boolean lock() {
-        if (!lock)
-            return lock = true;
-        else
-            return false;
-    }
-
-    public void unlock() {
-        lock = false;
-    }
-
-    public synchronized void searchCompleted(SearchActivity searchActivity){
+    public synchronized void searchCompleted(Iterator<SearchActivity> iter, SearchActivity searchActivity){
         searchesCompleted.add(searchActivity);
-        searchActivities.remove(searchActivity);
+        iter.remove();
         notifyAll();
         System.out.println("searches completed: "+searchesCompleted.size());
     }
@@ -104,12 +89,21 @@ public class SearchEngine {
         System.out.println("added search to arraylist");
     }
 
-    public synchronized void addResultFromWorker(WorkerResultMessage workerResultMessage) {
-        for (SearchActivity s: searchActivities){
-            if (s.getID() == workerResultMessage.getSearchActivityID())
+    public void addResultFromWorker(WorkerResultMessage workerResultMessage) {
+        Iterator<SearchActivity> iter = searchActivities.iterator();
+        while (iter.hasNext()) {
+            SearchActivity s = iter.next();
+            if (s.getID() == workerResultMessage.getSearchActivityID()) {
                 System.out.println("SearchEngine: adding result");
                 s.searchDone(workerResultMessage.getSearchedArticle());
+            }
+            if (workerResultMessage.getArticlesLeft() <= 1) {
+                searchCompleted(iter, s);
+                System.out.println("Search completed");
+            }
+
         }
+
     }
 
     public void startWorkerManager(ServerStreamer worker) {

@@ -31,11 +31,11 @@ public class WorkerStreamer extends Thread{
                 Object message = in.readObject();
                 if (message instanceof ArticleToSearch) {
                     ArticleToSearch a = (ArticleToSearch) message;
-                    worker.searchArticle(a.getArticle(), a.getFindStr(), a.getSearchActivityID());
+                    worker.searchArticle(a.getArticle(), a.getFindStr(), a.getSearchActivityID(), a.getArticlesLeft());
                 }
             } catch (IOException | ClassNotFoundException e) {
                 System.out.println("WorkerStreamer: Worker disconnected from the server.");
-                return;
+                System.exit(0);
             }
         }
         System.out.println("WorkerStreamer: Closing...");

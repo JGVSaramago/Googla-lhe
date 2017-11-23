@@ -1,4 +1,4 @@
-import Project.ArticleToSearch;
+import lib.*;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -31,7 +31,7 @@ public class WorkerStreamer extends Thread{
                 Object message = in.readObject();
                 if (message instanceof ArticleToSearch) {
                     ArticleToSearch a = (ArticleToSearch) message;
-                    worker.searchArticle(a.getArticle(), a.getFindStr());
+                    worker.searchArticle(a.getArticle(), a.getFindStr(), a.getSearchActivityID());
                 }
             } catch (IOException | ClassNotFoundException e) {
                 System.out.println("WorkerStreamer: Worker disconnected from the server.");

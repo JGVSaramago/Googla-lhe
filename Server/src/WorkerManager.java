@@ -1,46 +1,60 @@
-import Project.Article;
-import Project.ArticleToSearch;
+import lib.*;
 
 import java.util.ArrayList;
-import java.util.Random;
 
 public class WorkerManager extends Thread{
 
+    private SearchEngine searchEngine;
     private ServerStreamer worker;
     private ArrayList<SearchActivity> searchActivities;
     private ArrayList<Article> articles;
 
-    public WorkerManager(ServerStreamer worker, ArrayList<SearchActivity> searchActivities, ArrayList<Article> articles) {
+    private int activityIndex = 0;
+
+    public WorkerManager(SearchEngine searchEngine, ServerStreamer worker) {
+        this.searchEngine = searchEngine;
         this.worker = worker;
-        this.searchActivities = searchActivities;
-        this.articles = articles;
+        this.searchActivities = searchEngine.getSearchActivities();
+        this.articles = searchEngine.getArticles();
+    }
+
+    private synchronized void waitingMode() {
+        synchronized (searchEngine){
+            try {
+                System.out.println("WorkerManager going to sleep...");
+                searchEngine.wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private synchronized void incrementActivityIndex() {
+        int arraySize = searchActivities.size();
+        if (activityIndex < (arraySize-1))
+            activityIndex++;
+        else
+            activityIndex = 0;
     }
 
     @Override
     public void run() {
         while (true){
             if (searchActivities.isEmpty()) {
-                /*try {
-                    wait();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }*/
-                try {
-                    sleep(100);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+                waitingMode();
             } else {
-                    int activityIndex = new Random().nextInt(searchActivities.size());
-                    System.out.println("activityIndex: " + activityIndex);
-                    SearchActivity searchActivity = searchActivities.get(activityIndex);
-                    if (!searchActivity.isDone()) {
-                        System.out.println("Articles left: " + searchActivity.getArticlesLeft());
-                        ArticleToSearch articleToSearch = new ArticleToSearch(articles.get(searchActivity.getArticlesLeft()), searchActivity.getFindStr());
-                        searchActivity.searchStarted();
-                        worker.sendServerMessage(articleToSearch);
-                        System.out.println("Enviado para worker");
-                    }
+                SearchActivity searchActivity = searchActivities.get(activityIndex);
+                if (!searchActivity.isDone()) {
+                    System.out.println("Articles left: " + searchActivity.getArticlesLeft());
+                    ArticleToSearch articleToSearch = new ArticleToSearch(searchActivity.getID(), articles.get(searchActivity.getArticlesLeft()), searchActivity.getFindStr());
+                    searchActivity.searchStarted();
+                    worker.sendServerMessage(articleToSearch);
+                    System.out.println("Enviado para worker");
+                } else {
+                    searchEngine.searchCompleted(searchActivity);
+                    System.out.println("Search completed");
+                }
+                incrementActivityIndex();
             }
         }
     }

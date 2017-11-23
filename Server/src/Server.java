@@ -1,4 +1,4 @@
-import Project.*;
+import lib.*;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -84,7 +84,7 @@ public class Server {
 
 
     public ClientHistoryMessage getClientHistory(OtherRequestMessage request) {
-        File file = new File("src/Project/Server/history.txt");
+        File file = new File("src/history.txt");
         file.getParentFile().mkdirs();
         try {
             BufferedReader reader = new BufferedReader(new FileReader(file));

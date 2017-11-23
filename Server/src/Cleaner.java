@@ -1,36 +1,46 @@
-import Project.SearchResultMessage;
+import lib.*;
 
 import java.util.ArrayList;
 
 public class Cleaner extends Thread {
 
-    private ArrayList<SearchActivity> searchActivities;
+    private SearchEngine searchEngine;
+    private ArrayList<SearchActivity> searchesCompleted;
+    private ArrayList<SearchActivity> toRemove;
 
-    public Cleaner(ArrayList<SearchActivity> searchActivities) {
-        this.searchActivities = searchActivities;
+    public Cleaner(SearchEngine searchEngine, ArrayList<SearchActivity> searchesCompleted) {
+        this.searchesCompleted = searchesCompleted;
+        this.searchEngine = searchEngine;
     }
 
-    @Override
-        public void run() {
-            while (true){
-                for (SearchActivity searchActivity: searchActivities)
-                    if (searchActivity.getArticlesLeft() == 0) {
-                        Thread sender = new Thread(new Runnable() { // Thread para enviar ao cliente o resultado
-                            @Override
-                            public void run() {
-                                System.out.println("sending result");
-                                SearchActivity s = searchActivity;
-                                searchActivities.remove(s);
-                                s.getClient().sendServerMessage(new SearchResultMessage(searchActivity.getResults(), searchActivity.getOccurrencesFound(), searchActivity.getFilesWithOccurrences(), searchActivity.getSearchHist()));
-
-                            }
-                        });
-                        sender.start();
-                    }
-
+    private synchronized void waitingMode() {
+        synchronized (searchEngine){
+            try {
+                System.out.println("Cleaner going to sleep...");
+                searchEngine.wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 
+    @Override
+    public void run() {
+        while (true){
 
+            if (searchesCompleted.isEmpty())
+                waitingMode();
+            else{
+                System.out.println("Ha limpeza a fazer");
+                ResultSender sender = new ResultSender(searchesCompleted.get(0));
+                sender.start();
+                searchesCompleted.remove(searchesCompleted.get(0));
+                //toRemove.add(searchActivity);
+                System.out.println(searchesCompleted.size());
+            }
+            //for (SearchActivity s : toRemove)
+            //  searchActivities.remove(s);
+        }
+    }
 
 }

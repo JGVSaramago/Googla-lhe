@@ -1,4 +1,4 @@
-
+import lib.*;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
@@ -7,6 +7,8 @@ import java.net.Socket;
 
 public class Worker {
 
+    private int counter = 0;
+    private int counter2 = 0;
     private static final String SERVER_NAME = "localhost";
     private static final int SERVER_PORT = 8080;
     private Socket socket;
@@ -23,6 +25,11 @@ public class Worker {
 
     public boolean isOnline() {
         return workerOnline;
+    }
+
+    public void resetCounters(){
+        counter = 0;
+        counter2 = 0;
     }
 
     private void closeConnections() {
@@ -61,13 +68,16 @@ public class Worker {
         }
     }
 
-    public SearchedArticle searchArticle(Article article, String findStr) {
-        SearchedArticle searchedArticle = new SearchedArticle(new ArticleTitle(article.getID(), article.getTitle()));
+    public void searchArticle(Article article, String findStr, int searchActivityID) {
+        System.out.println("Searching article");
+        boolean occurrenceFound = false;
+        SearchedArticle searchedArticle = new SearchedArticle(new ArticleTitle(article.getID(), article.getTitle()), searchActivityID);
         int lastIndex = 0;
         String text = article.getTitle().toLowerCase();
         while(lastIndex != -1){
             lastIndex = text.indexOf(findStr.toLowerCase(),lastIndex);
             if(lastIndex != -1){
+                occurrenceFound = true;
                 searchedArticle.addOccurrence(lastIndex);
                 lastIndex += findStr.length();
             }
@@ -78,11 +88,28 @@ public class Worker {
         while(lastIndex != -1){
             lastIndex = text.indexOf(findStr.toLowerCase(),lastIndex);
             if(lastIndex != -1){
+                occurrenceFound = true;
                 searchedArticle.addOccurrence(lastIndex + titleOffset);
                 lastIndex += findStr.length();
             }
         }
-        return searchedArticle;
+        counter++;
+        System.out.println("Searched "+counter+" articles.");
+        if (occurrenceFound) {
+            sendResult(searchedArticle, searchActivityID);
+        }
+    }
+
+    public synchronized void sendResult(SearchedArticle searchedArticle, int searchActivityID){
+        try {
+            out.writeObject(new WorkerResultMessage(searchedArticle, searchActivityID));
+            out.flush();
+            System.out.println("Worker: object sent");
+            counter2++;
+            System.out.println("Sent "+counter2+" articles.");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 }

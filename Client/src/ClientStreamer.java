@@ -1,6 +1,7 @@
-import Project.*;
-import Project.Client.Client;
-import Project.Client.ClientGUI;
+import lib.ArticleBody;
+import lib.ClientHistoryMessage;
+import lib.OtherRequestMessage;
+import lib.SearchResultMessage;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -34,6 +35,7 @@ public class ClientStreamer extends Thread {
             try {
                 Object message = in.readObject();
                 if (message instanceof SearchResultMessage) {
+                    System.out.println("Received search result");
                     gui.showSearchResults((SearchResultMessage) message);
                 } else if (message instanceof ArticleBody){
                     gui.setArticleBody((ArticleBody) message);
@@ -45,9 +47,11 @@ public class ClientStreamer extends Thread {
                             break;
                     }
                 }
-            } catch (IOException | ClassNotFoundException e) {
+            } catch (IOException e) {
                 System.out.println("ClientStreamer: Client disconnected from the server.");
                 return;
+            } catch (ClassNotFoundException e) {
+                System.out.println("ClientStreamer: Class unknown or not the same as the one in the server.");
             }
         }
         System.out.println("ClientStreamer: Closing...");

@@ -1,4 +1,4 @@
-import Project.*;
+import lib.*;
 
 import javax.swing.*;
 import java.io.*;
@@ -63,6 +63,7 @@ public class Client {
     public void sendSearchRequest(String findStr) {
         try {
             out.writeObject(new SearchRequestMessage(CLIENTE_NAME, findStr));
+            out.flush();
         } catch (IOException | NullPointerException e) {
             System.out.println("sendSearchRequest(): Unable to send request, check connection to the server.");
             JOptionPane.showMessageDialog(null,"sendSearchRequest(): Unable to send request, check connection to the server.");

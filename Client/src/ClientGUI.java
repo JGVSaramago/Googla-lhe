@@ -1,7 +1,4 @@
-import Project.ArticleBody;
-import Project.SearchResultMessage;
-import Project.SearchedArticle;
-import Project.ThemeEngine;
+import lib.*;
 
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
@@ -12,7 +9,8 @@ import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
 
-import static Project.ThemeEngine.*;
+import static lib.ThemeEngine.setDarkTheme;
+import static lib.ThemeEngine.setLightTheme;
 
 public class ClientGUI {
 

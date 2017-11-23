@@ -1,18 +1,54 @@
-import Project.*;
+import lib.*;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.concurrent.locks.Lock;
 
 public class SearchEngine {
+    private int searchActivityIDcounter = 0;
     private ArrayList<Article> articles;
     private ArrayList<SearchActivity> searchActivities;
+    private  ArrayList<SearchActivity> searchesCompleted;
+    private boolean lock = false;
+    private Cleaner cleaner;
 
     public SearchEngine() {
         articles = new ArrayList<>();
         searchActivities = new ArrayList<>();
+        searchesCompleted = new ArrayList<>();
         txtToObject(); // Os ficheiros são todos transformados em objetos assim sempre que for feita uma pesquisa não é preciso ir ler tudo outra vez
-        Cleaner cleaner = new Cleaner(searchActivities);
+        cleaner = new Cleaner(this, searchesCompleted);
         cleaner.start();
+    }
+
+    public boolean isLock() {
+        return lock;
+    }
+
+    public boolean lock() {
+        if (!lock)
+            return lock = true;
+        else
+            return false;
+    }
+
+    public void unlock() {
+        lock = false;
+    }
+
+    public synchronized void searchCompleted(SearchActivity searchActivity){
+        searchesCompleted.add(searchActivity);
+        searchActivities.remove(searchActivity);
+        notifyAll();
+        System.out.println("searches completed: "+searchesCompleted.size());
+    }
+
+    public ArrayList<Article> getArticles() {
+        return articles;
+    }
+
+    public ArrayList<SearchActivity> getSearchActivities() {
+        return searchActivities;
     }
 
     public ArticleBody getArticleBody(int id){
@@ -61,20 +97,23 @@ public class SearchEngine {
         }
     }
 
-    public void search(String findStr, String[] searchHist, ServerStreamer client) {
-        searchActivities.add(new SearchActivity(articles.size()-1, client, findStr, searchHist));
+    public synchronized void search(String findStr, String[] searchHist, ServerStreamer client) {
+        searchActivities.add(new SearchActivity(searchActivityIDcounter,articles.size()-1, client, findStr, searchHist));
+        searchActivityIDcounter++;
+        this.notifyAll();
         System.out.println("added search to arraylist");
     }
 
-    public void addResultFromWorker(WorkerResultMessage workerResultMessage) {
+    public synchronized void addResultFromWorker(WorkerResultMessage workerResultMessage) {
         for (SearchActivity s: searchActivities){
-            if (s.equals(workerResultMessage.getSearchActivity()))
+            if (s.getID() == workerResultMessage.getSearchActivityID())
+                System.out.println("SearchEngine: adding result");
                 s.searchDone(workerResultMessage.getSearchedArticle());
         }
     }
 
     public void startWorkerManager(ServerStreamer worker) {
-        new WorkerManager(worker,searchActivities,articles).start();
+        new WorkerManager(this, worker).start();
     }
 
 }

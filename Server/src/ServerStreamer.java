@@ -1,4 +1,4 @@
-import Project.*;
+import lib.*;
 
 import java.io.*;
 import java.net.Socket;
@@ -23,15 +23,14 @@ public class ServerStreamer extends Thread{
             while (true) {
                 try {
                     Object message = in.readObject();
-                    if (message instanceof WorkerResultMessage)
-                        server.addResultFromWorker((WorkerResultMessage) message);
-                    if (message instanceof SearchRequestMessage) {
+                    if (message instanceof WorkerResultMessage) {
+                        SearchedArticleManager s = new SearchedArticleManager(server, message);
+                        s.start();
+                    } else if (message instanceof SearchRequestMessage) {
                         server.doSearch((SearchRequestMessage) message, this);
                     } else if (message instanceof BodyRequestMessage){
                         System.out.println("BodyRequestReceived");
                         sendServerMessage(server.getArticleBody(((BodyRequestMessage) message).getID()));
-                    } else if (message instanceof WorkerRequestMessage){
-                        // TODO
                     } else if (message instanceof OtherRequestMessage){
                         switch (((OtherRequestMessage) message).getType()){
                             case WORKER:

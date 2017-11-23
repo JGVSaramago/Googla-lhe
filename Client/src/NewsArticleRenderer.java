@@ -1,4 +1,4 @@
-import Project.SearchedArticle;
+import lib.*;
 
 import javax.swing.*;
 import java.awt.*;

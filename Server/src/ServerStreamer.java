@@ -24,8 +24,11 @@ public class ServerStreamer extends Thread{
                 try {
                     Object message = in.readObject();
                     if (message instanceof WorkerResultMessage) {
-                        SearchedArticleManager s = new SearchedArticleManager(server, message);
-                        s.start();
+                        System.out.println("  Received result from worker");
+                        server.addResultFromWorker((WorkerResultMessage) message);
+                    } else if (message instanceof SetWorkerDisponibleMessage) {
+                        System.out.println("  Set worker to disponible");
+                        server.setWorkerDisponible(((SetWorkerDisponibleMessage) message).getWORKER_ID());
                     } else if (message instanceof SearchRequestMessage) {
                         server.doSearch((SearchRequestMessage) message, this);
                     } else if (message instanceof BodyRequestMessage){

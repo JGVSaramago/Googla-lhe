@@ -1,26 +1,25 @@
 import lib.*;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class SearchActivity {
 
     private int counter = 0;
 
     private final int ID;
-    private ArrayList<SearchedArticle> results;
+    private ArrayList<SearchedArticle> results = new ArrayList<>();
     private int occurrencesFound = 0;
     private int filesWithOccurrences = 0;
     private String[] searchHist;
 
-    private int articlesLeft;
+    private AtomicInteger articlesLeft;
     private ServerStreamer client;
     private String findStr;
-    private boolean done = false;
 
     public SearchActivity(int ID, int articlesLeft, ServerStreamer client, String findStr, String[] searchHist) {
         this.ID = ID;
-        this.results = new ArrayList<>();
-        this.articlesLeft = articlesLeft;
+        this.articlesLeft = new AtomicInteger(articlesLeft);
         this.client = client;
         this.findStr = findStr;
         this.searchHist = searchHist;
@@ -46,8 +45,8 @@ public class SearchActivity {
         return searchHist;
     }
 
-    public synchronized int getArticlesLeft() {
-        return articlesLeft;
+    public int getArticlesLeft() {
+        return articlesLeft.get();
     }
 
     public ServerStreamer getClient() {
@@ -58,23 +57,16 @@ public class SearchActivity {
         return findStr;
     }
 
-    public synchronized void searchStarted(){
-        articlesLeft--;
-        if (articlesLeft<1)
-            done = true;
+    public void decrementArticesLeft() {
+        if (articlesLeft.decrementAndGet() < 0)
+            System.out.println("SearchActivity "+ID+": articlesLeft is "+getArticlesLeft());
     }
 
-    public synchronized void searchDone(SearchedArticle searchedArticle) {
-        counter++;
-        System.out.println(counter+" articles returned to id: "+ID);
-        if (searchedArticle.getOccurrencesCount() > 0) {
-            results.add(searchedArticle);
-            occurrencesFound += searchedArticle.getOccurrencesCount();
-            filesWithOccurrences++;
-        }
+    public void addResult(SearchedArticle sa) {
+        results.add(sa);
+        occurrencesFound += sa.getOccurrencesCount();
+        filesWithOccurrences++;
     }
 
-    public boolean isDone(){
-        return done;
-    }
+
 }

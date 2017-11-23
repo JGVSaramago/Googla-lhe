@@ -1,29 +1,36 @@
-import lib.*;
+import lib.ArticleToSearch;
+import lib.RequestToWorkerMessage;
 
-import java.util.ArrayList;
+public class WorkerManager extends Thread {
 
-public class WorkerManager extends Thread{
-
-    private SearchEngine searchEngine;
+    private final int ID;
+    private volatile boolean disponible = true;
+    private volatile boolean workerOnline = true;
     private ServerStreamer worker;
-    private ArrayList<SearchActivity> searchActivities;
-    private ArrayList<Article> articles;
+    private SearchEngine searchEngine;
 
-    private int activityIndex = 0;
-
-    public WorkerManager(SearchEngine searchEngine, ServerStreamer worker) {
-        this.searchEngine = searchEngine;
+    public WorkerManager(int ID, ServerStreamer worker, SearchEngine searchEngine) {
+        this.ID = ID;
         this.worker = worker;
-        this.searchActivities = searchEngine.getSearchActivities();
-        this.articles = searchEngine.getArticles();
+        this.searchEngine = searchEngine;
     }
 
+    public int getID() {
+        return ID;
+    }
 
+    public boolean isDisponible() {
+        return disponible;
+    }
 
-    private synchronized void waitingMode() {
-        synchronized (searchEngine){
+    public void setDisponible() {
+        disponible = true;
+    }
+
+    private void waitingMode() {
+        synchronized (searchEngine) {
             try {
-                System.out.println("WorkerManager going to sleep...");
+                System.out.println("WorkerManager " + ID + ": going to sleep...");
                 searchEngine.wait();
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -31,30 +38,22 @@ public class WorkerManager extends Thread{
         }
     }
 
-    private synchronized void incrementActivityIndex() {
-        int arraySize = searchActivities.size();
-        if (activityIndex < (arraySize-1))
-            activityIndex++;
-        else
-            activityIndex = 0;
+    private synchronized void sendSearchToWorker(ArticleToSearch a, int id) {
+        worker.sendServerMessage(new RequestToWorkerMessage(a, id));
+        System.out.println("WorkerManeger "+ID+": sent search to worker ");
     }
 
     @Override
     public void run() {
-        while (true){
-            if (searchActivities.isEmpty()) {
-                waitingMode();
-            } else {
-                SearchActivity searchActivity = searchActivities.get(activityIndex);
-                if (!searchActivity.isDone()) {
-                    int articlesLeft = searchActivity.getArticlesLeft();
-                    System.out.println("Articles left: " + articlesLeft);
-                    ArticleToSearch articleToSearch = new ArticleToSearch(searchActivity.getID(), articlesLeft, articles.get(searchActivity.getArticlesLeft()), searchActivity.getFindStr());
-                    searchActivity.searchStarted();
-                    worker.sendServerMessage(articleToSearch);
-                    System.out.println("Enviado para worker");
+        while (workerOnline){
+            if (disponible) { //se o worker nao estiver ocupado
+                ArticleToSearch a = searchEngine.getArticleToSearch();
+                if (a == null) //se nao houver artigos para pesquisar
+                    waitingMode();
+                else { //pesquisa artigo recebido
+                    disponible = false;
+                    sendSearchToWorker(a, ID);
                 }
-                incrementActivityIndex();
             }
         }
     }

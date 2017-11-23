@@ -5,14 +5,13 @@ import java.io.Serializable;
 public class WorkerResultMessage implements Serializable {
 
     private SearchedArticle searchedArticle;
-    //private SearchActivity searchActivity;
     private final int searchActivityID;
-    private final int articlesLeft;
+    private final int WORKER_ID;
 
-    public WorkerResultMessage(SearchedArticle searchedArticle, int searchActivityID, int articlesLeft) {
+    public WorkerResultMessage(SearchedArticle searchedArticle, int searchActivityID, int WORKER_ID) {
         this.searchedArticle = searchedArticle;
         this.searchActivityID = searchActivityID;
-        this.articlesLeft = articlesLeft;
+        this.WORKER_ID = WORKER_ID;
     }
 
     public SearchedArticle getSearchedArticle() {
@@ -23,7 +22,7 @@ public class WorkerResultMessage implements Serializable {
         return searchActivityID;
     }
 
-    public int getArticlesLeft() {
-        return articlesLeft;
+    public int getWORKER_ID() {
+        return WORKER_ID;
     }
 }

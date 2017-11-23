@@ -68,7 +68,7 @@ public class Server {
 
     public void doSearch(SearchRequestMessage searchRequestMessage, ServerStreamer client) {
         String findStr = searchRequestMessage.getFindStr();
-        File file = new File("src/Project/Server/history.txt");
+        File file = new File("src/history.txt");
         file.getParentFile().mkdirs();
         String searchHist = searchRequestMessage.getUsername()+"|"+findStr+"|"+getDateStamp();
         try {
@@ -108,8 +108,8 @@ public class Server {
     }
 
     public void cleanClientHistory(String username) {
-        File historyFile = new File("src/Project/Server/history.txt");
-        File tempFile = new File("src/Project/Server/tempHistory.txt");
+        File historyFile = new File("src/history.txt");
+        File tempFile = new File("src/tempHistory.txt");
         try {
             BufferedReader reader = new BufferedReader(new FileReader(historyFile));
             BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile));
@@ -136,6 +136,10 @@ public class Server {
 
     public void addResultFromWorker(WorkerResultMessage workerResultMessage){
             searchEngine.addResultFromWorker(workerResultMessage);
+    }
+
+    public void setWorkerDisponible(int WORKER_ID) {
+        searchEngine.setWorkerDisponible(WORKER_ID);
     }
 }
 

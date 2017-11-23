@@ -29,9 +29,10 @@ public class WorkerStreamer extends Thread{
         while (worker.isOnline()){
             try {
                 Object message = in.readObject();
-                if (message instanceof ArticleToSearch) {
-                    ArticleToSearch a = (ArticleToSearch) message;
-                    worker.searchArticle(a.getArticle(), a.getFindStr(), a.getSearchActivityID(), a.getArticlesLeft());
+                if (message instanceof RequestToWorkerMessage) {
+                    RequestToWorkerMessage rtwm = (RequestToWorkerMessage) message;
+                    ArticleToSearch a = rtwm.getArticleToSearch();
+                    worker.searchArticle(a.getArticle(), a.getFindStr(), a.getSearchActivityID(), rtwm.getWORKER_ID());
                 }
             } catch (IOException | ClassNotFoundException e) {
                 System.out.println("WorkerStreamer: Worker disconnected from the server.");

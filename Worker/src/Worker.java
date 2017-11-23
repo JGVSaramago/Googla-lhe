@@ -68,7 +68,7 @@ public class Worker {
         }
     }
 
-    public void searchArticle(Article article, String findStr, int searchActivityID, int articlesLeft) {
+    public void searchArticle(Article article, String findStr, int searchActivityID, int WORKER_ID) {
         System.out.println("Searching article");
         boolean occurrenceFound = false;
         SearchedArticle searchedArticle = new SearchedArticle(new ArticleTitle(article.getID(), article.getTitle()), searchActivityID);
@@ -93,20 +93,29 @@ public class Worker {
                 lastIndex += findStr.length();
             }
         }
-        counter++;
-        System.out.println("Searched "+counter+" articles.");
+        System.out.println("  Searched "+(++counter)+" articles.");
         if (occurrenceFound) {
-            sendResult(searchedArticle, searchActivityID, articlesLeft);
+            System.out.println("    occurrenceFound");
+            sendResult(searchedArticle, searchActivityID, WORKER_ID);
+        } else
+            sendWorkerDisponibleMessage(WORKER_ID);
+    }
+
+    public synchronized void sendWorkerDisponibleMessage(int WORKER_ID) {
+        try {
+            out.writeObject(new SetWorkerDisponibleMessage(WORKER_ID));
+            out.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
-    public synchronized void sendResult(SearchedArticle searchedArticle, int searchActivityID, int articlesLeft){
+    public synchronized void sendResult(SearchedArticle searchedArticle, int searchActivityID, int WORKER_ID){
         try {
-            out.writeObject(new WorkerResultMessage(searchedArticle, searchActivityID, articlesLeft));
+            out.writeObject(new WorkerResultMessage(searchedArticle, searchActivityID, WORKER_ID));
             out.flush();
-            System.out.println("Worker: object sent");
-            counter2++;
-            System.out.println("Sent "+counter2+" articles.");
+            System.out.println("      Worker: object sent");
+            System.out.println("        Sent "+(++counter2)+" articles.");
         } catch (IOException e) {
             e.printStackTrace();
         }

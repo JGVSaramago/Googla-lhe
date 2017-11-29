@@ -9,6 +9,8 @@ import java.util.Date;
 
 public class Server {
 
+    int counter = 0;
+
     private SearchEngine searchEngine;
     private ServerGUI gui;
     private static final int PORT = 8080;
@@ -177,8 +179,10 @@ public class Server {
         return searchEngine.getArticleBody(id);
     }
 
-    public void addResultFromWorker(WorkerResultMessage workerResultMessage){
-            searchEngine.addResultFromWorker(workerResultMessage);
+    public synchronized void addResultFromWorker(WorkerResultMessage workerResultMessage){
+        searchEngine.addResultFromWorker(workerResultMessage);
+        counter++;
+        System.out.println("Server added: "+counter);
     }
 }
 

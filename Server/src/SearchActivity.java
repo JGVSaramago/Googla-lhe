@@ -5,9 +5,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class SearchActivity {
 
+    int counter = 0;
+
     private final int searchActivityID;
     private ArrayList<SearchedArticle> results = new ArrayList<>();
-    private ArrayList<RequestToWorkerMessage> pendingSearches = new ArrayList<>();
+    private ArrayList<ArticleToSearch> pendingSearches = new ArrayList<>();
     private volatile int occurrencesFound = 0;
     private AtomicInteger filesWithOccurrences = new AtomicInteger(0);
     private String[] searchHist;
@@ -17,15 +19,24 @@ public class SearchActivity {
     private AtomicInteger articlesReceived;
     private ServerStreamer client;
     private String findStr;
+    private volatile boolean waitingForAnswers = false;
 
     public SearchActivity(int searchActivityID, int articlesLeft, ServerStreamer client, String findStr, String[] searchHist) {
         this.searchActivityID = searchActivityID;
-        this.articlesLeft = new AtomicInteger(articlesLeft);
-        articlesReceived = new AtomicInteger(articlesLeft);
+        this.articlesLeft = new AtomicInteger(articlesLeft-1);
+        articlesReceived = new AtomicInteger(0);
         this.client = client;
         this.findStr = findStr;
         this.searchHist = searchHist;
         articlesCount = articlesLeft;
+    }
+
+    public void waitingForAnswers() {
+        waitingForAnswers = true;
+    }
+
+    public boolean isWaitingForAnswers() {
+        return waitingForAnswers;
     }
 
     public int getSearchActivityID() {
@@ -40,7 +51,7 @@ public class SearchActivity {
         return results;
     }
 
-    public ArrayList<RequestToWorkerMessage> getPendingSearches() {
+    public ArrayList<ArticleToSearch> getPendingSearches() {
         return pendingSearches;
     }
 
@@ -73,9 +84,11 @@ public class SearchActivity {
             System.out.println("SearchActivity "+ searchActivityID +": articlesLeft is "+getArticlesLeft());
     }
 
-    public void incrementArticlesReceived() {
+    public synchronized void incrementArticlesReceived() {
+        counter++;
+        System.out.println("Incremented "+counter+" times.");
         if (articlesReceived.incrementAndGet() > articlesCount)
-            System.out.println("SearchActivity: This should be impossible "+articlesReceived.get());
+            System.out.println("SearchActivity: This should be impossible "+articlesReceived.get()+">"+articlesCount);
     }
 
     public synchronized void addResult(SearchedArticle sa) {
@@ -85,9 +98,10 @@ public class SearchActivity {
         incrementArticlesReceived();
     }
 
-    public void addPendingSearch(RequestToWorkerMessage rtwm) {
-        pendingSearches.add(rtwm);
+    public void addPendingSearch(ArticleToSearch ats) {
+        pendingSearches.add(ats);
     }
+
 
 
 }

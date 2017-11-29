@@ -40,6 +40,22 @@ public class ServerStreamer extends Thread{
         }
     }
 
+    private void addResultToWorker(WorkerResultMessage message) {
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (true) {
+                    counter++;
+                    System.out.println("ID " + workerManager.getID() + " recebido: " + counter);
+                    setWorkerDisponible();
+                    System.out.println("    Received result from worker");
+                    server.addResultFromWorker(message);
+                }
+            }
+        });
+        t.start();
+    }
+
     @Override
     public void run() {
         try {
@@ -50,14 +66,14 @@ public class ServerStreamer extends Thread{
                     Object message = in.readObject();
                     if (message instanceof WorkerResultMessage) {
                         counter++;
-                        System.out.println(counter);
+                        System.out.println("ID " + workerManager.getID() + " recebido: " + counter);
                         setWorkerDisponible();
                         System.out.println("    Received result from worker");
                         server.addResultFromWorker((WorkerResultMessage) message);
                     } else if (message instanceof SetWorkerDisponibleMessage) {
                         setWorkerDisponible();
                         workerManager.articleWithNoOccurrences();
-                        counter++;
+                        //counter++;
                         System.out.println(counter);
                     } else if (message instanceof SearchRequestMessage) {
                         server.doSearch((SearchRequestMessage) message, this);

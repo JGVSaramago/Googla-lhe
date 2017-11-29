@@ -31,6 +31,7 @@ public class Client {
         System.out.println("Disconnecting client from server...");
         clientOnline = false;
         closeConnections();
+        // TODO se desligar o servidor e depois o cliente, o cliente nao fecha
     }
 
     public boolean isClientOnline() {

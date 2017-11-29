@@ -1,7 +1,9 @@
 import lib.*;
 
+import javax.swing.text.html.HTMLDocument;
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Iterator;
 
 public class SearchEngine {
 
@@ -82,18 +84,22 @@ public class SearchEngine {
                 SearchActivity s = searchActivities.get(0);
                 int artLeft = s.getArticlesLeft();
                 if (artLeft < 0) {
-                    if (s.getPendingSearches().isEmpty()) {
-                        if (s.getArticlesReceived() >= articles.size())
-                            sendToClient(s);
-                        // TODO check if there are pending searches
+                    ArrayList<ArticleToSearch> arrATS = s.getPendingSearches();
+                    if (arrATS.isEmpty()) {
+                        waitForAllAnswers(s);
+                        return null;
+                    } else {
+                        ArticleToSearch ats = arrATS.get(0);
+                        arrATS.remove(ats);
+                        System.out.println("Pending searches: "+arrATS.size());
+                        return ats;
                     }
-                    /*if (s.getArticlesReceived() >= articles.size())
-                        sendToClient(s);*/
-                    return null;
+                    // TODO search pending searches
+                } else {
+                    checkIfRepeatedArticlesSent.add(artLeft);
+                    s.decrementArticesLeft();
+                    return new ArticleToSearch(s.getSearchActivityID(), articles.get(artLeft), s.getFindStr());
                 }
-                checkIfRepeatedArticlesSent.add(artLeft);
-                s.decrementArticesLeft();
-                return new ArticleToSearch(s.getSearchActivityID(), articles.get(artLeft), s.getFindStr());
             }
             return null;
         }
@@ -122,7 +128,7 @@ public class SearchEngine {
     }
 
     public synchronized void search(String findStr, String[] searchHist, ServerStreamer client) {
-        searchActivities.add(new SearchActivity(searchActivityIDcounter++, articles.size()-1, client, findStr, searchHist));
+        searchActivities.add(new SearchActivity(searchActivityIDcounter++, articles.size(), client, findStr, searchHist));
         notifyAll();
     }
 
@@ -137,7 +143,7 @@ public class SearchEngine {
     public void addPendingSearchToActivity(RequestToWorkerMessage rtwm) {
         for (SearchActivity s: searchActivities){
             if (s.getSearchActivityID() == rtwm.getArticleToSearch().getSearchActivityID()) {
-                s.addPendingSearch(rtwm);
+                s.addPendingSearch(rtwm.getArticleToSearch());
             }
         }
     }
@@ -153,6 +159,22 @@ public class SearchEngine {
         for (SearchActivity s: searchActivities)
             if (s.getSearchActivityID() == searchActivityID)
                 s.incrementArticlesReceived();
+    }
+
+    public void waitForAllAnswers(SearchActivity s) {
+        System.out.println("SearchEngine: Waiting for all answers to SearchActivity "+s.getSearchActivityID());
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (true)
+                    if (s.getArticlesReceived() >= articles.size()) {
+                        System.out.println(s.getArticlesReceived()+" >= "+articles.size());
+                        sendToClient(s);
+                        return;
+                    }
+            }
+        });
+        t.start();
     }
 
 }

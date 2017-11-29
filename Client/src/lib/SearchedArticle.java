@@ -7,11 +7,9 @@ public class SearchedArticle implements Serializable{
 
     private ArticleTitle articleTitle;
     private ArrayList<Integer> occurrences;
-    private final int searchActivityID;
 
-    public SearchedArticle(ArticleTitle articleTitle, int searchActivityID) {
+    public SearchedArticle(ArticleTitle articleTitle) {
         this.articleTitle = articleTitle;
-        this.searchActivityID = searchActivityID;
         occurrences = new ArrayList<>();
     }
 

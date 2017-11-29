@@ -13,6 +13,8 @@ public class SearchEngine {
     private ArrayList<Article> articles = new ArrayList<>();
     private volatile ArrayList<SearchActivity> searchActivities = new ArrayList<>();
 
+    private volatile ArrayList<Integer> checkIfRepeatedArticlesSent = new ArrayList<>();
+
 
     public SearchEngine() {
         txtToObject(); // Os ficheiros são todos transformados em objetos assim sempre que for feita uma pesquisa não é preciso ir ler tudo outra vez
@@ -75,23 +77,47 @@ public class SearchEngine {
     }
 
     public ArticleToSearch getArticleToSearch(){
-        synchronized (searchActivities){
-            if (!searchActivities.isEmpty()){
+        synchronized (searchActivities) {
+            if (!searchActivities.isEmpty()) {
                 SearchActivity s = searchActivities.get(0);
                 int artLeft = s.getArticlesLeft();
-                if (artLeft < 0){
-                    sendToClient(s);
+                if (artLeft < 0) {
+                    if (s.getPendingSearches().isEmpty()) {
+                        if (s.getArticlesReceived() >= articles.size())
+                            sendToClient(s);
+                        // TODO check if there are pending searches
+                    }
+                    /*if (s.getArticlesReceived() >= articles.size())
+                        sendToClient(s);*/
                     return null;
                 }
+                checkIfRepeatedArticlesSent.add(artLeft);
                 s.decrementArticesLeft();
-                return new ArticleToSearch(s.getID(), articles.get(artLeft), s.getFindStr());
+                return new ArticleToSearch(s.getSearchActivityID(), articles.get(artLeft), s.getFindStr());
             }
+            return null;
         }
-        return null;
     }
 
     private synchronized void sendToClient(SearchActivity s) {
         searchActivities.removeIf(sa -> sa.equals(s)); //removes SearchActivity 'sa' if it is equal to the SearchActivity given 's'
+        System.out.println("-------Pesquisas no arraylist: "+searchActivities.size());
+        int counter = 0;
+        for (Integer i: checkIfRepeatedArticlesSent) { //Just to checkIfRepeatedArticlesSent if there is happening repeated searches
+            for (Integer e : checkIfRepeatedArticlesSent) {
+                if (i.equals(e)) {
+                    counter++;
+                    if (counter>=2)
+                        System.out.println("This should not happen, the same article was searched "+counter+" times");
+                }
+            }
+            counter = 0;
+        }
+        int count = 0;
+        for (SearchedArticle b: s.getResults())
+            count+=b.getOccurrencesCount();
+        System.out.println("Occurrences found: "+count);
+        checkIfRepeatedArticlesSent = new ArrayList<>();
         s.getClient().sendServerMessage( new SearchResultMessage( s.getResults(), s.getOccurrencesFound(), s.getFilesWithOccurrences(), s.getSearchHist()));
     }
 
@@ -102,26 +128,31 @@ public class SearchEngine {
 
     public synchronized void addResultFromWorker(WorkerResultMessage wrm) {
         for (SearchActivity s: searchActivities){
-            if (s.getID() == wrm.getSearchActivityID()) {
+            if (s.getSearchActivityID() == wrm.getSearchActivityID()) {
                 s.addResult(wrm.getSearchedArticle());
-                setWorkerDisponible(wrm.getWORKER_ID());
             }
         }
     }
 
-    public synchronized void setWorkerDisponible(int WORKER_ID) {
-        for (WorkerManager wm: workerManagers)
-            if (wm.getID() == WORKER_ID) {
-                wm.setDisponible();
-                if (wm.isDisponible())
-                    System.out.println("Worker "+WORKER_ID+" now disponible");
+    public void addPendingSearchToActivity(RequestToWorkerMessage rtwm) {
+        for (SearchActivity s: searchActivities){
+            if (s.getSearchActivityID() == rtwm.getArticleToSearch().getSearchActivityID()) {
+                s.addPendingSearch(rtwm);
             }
+        }
     }
 
-    public void startWorkerManager(ServerStreamer worker) {
+    public WorkerManager startWorkerManager(ServerStreamer worker) {
         WorkerManager w = new WorkerManager(workerManagerIDcounter++, worker, this);
         workerManagers.add(w);
         w.start();
+        return w;
+    }
+
+    public void articleReceived(int searchActivityID) {
+        for (SearchActivity s: searchActivities)
+            if (s.getSearchActivityID() == searchActivityID)
+                s.incrementArticlesReceived();
     }
 
 }

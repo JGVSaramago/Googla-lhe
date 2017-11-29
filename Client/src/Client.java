@@ -2,6 +2,7 @@ import lib.*;
 
 import javax.swing.*;
 import java.io.*;
+import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.Socket;
 
@@ -16,54 +17,70 @@ public class Client {
     private Socket socket;
     private ObjectOutputStream out;
     private volatile boolean clientOnline = false;
+    private volatile boolean waitingForResult = false;
+    private ClientStreamer textReceiver;
 
     public Client(String CLIENTE_NAME) {
         this.gui = new ClientGUI(this);
         this.CLIENTE_NAME = CLIENTE_NAME;
         startClient();
-        closeConnections();
+        System.out.println("Main client closing...");
     }
 
-    public void setOffline() {
+    public void disconnect() {
+        System.out.println("Disconnecting client from server...");
         clientOnline = false;
-        System.out.println("setOffline()");
+        closeConnections();
     }
 
     public boolean isClientOnline() {
         return clientOnline;
     }
 
-    public void closeConnections() {
-        try {
-            System.out.println("closeConnections()");
-            out.writeObject(new OtherRequestMessage(MessageType.CLOSE, null));
-            socket.close();
-        } catch (IOException | NullPointerException e) {
-            System.out.println("Unable to properly disconnect Client.");
-        }
+    public void receivedSearchAnswer() {
+        waitingForResult = false;
     }
 
-    private void startClient() {
+    public void closeConnections() {
+            try {
+                out.writeObject(new OtherRequestMessage(MessageType.CLOSE, null));
+                socket.close();
+            } catch (IOException | NullPointerException e) {
+                System.out.println("Unable to properly disconnect Client.");
+            }
+    }
+
+    public void startClient() {
+        waitingForResult = false;
+        clientOnline = false;
+        System.out.println("Trying to connect with server...");
         doConnections();
         if (clientOnline) {
-            System.out.println("Connections established");
+            System.out.println("  Connections established");
             startSearchResultsReceiver();
-            System.out.println("Receiver started");
             getClientHistory();
-            while (clientOnline);
-            System.out.println("offline");
         }
     }
 
     private void startSearchResultsReceiver() {
-        ClientStreamer textReceiver = new ClientStreamer(socket, gui,this);
+        textReceiver = new ClientStreamer(socket, gui,this);
         textReceiver.start();
+        System.out.println("    Receiver started");
     }
 
-    public void sendSearchRequest(String findStr) {
+    public synchronized void sendSearchRequest(String findStr) {
         try {
-            out.writeObject(new SearchRequestMessage(CLIENTE_NAME, findStr));
-            out.flush();
+            if (clientOnline) {
+                if (!waitingForResult) {
+                    notifyAll();
+                    out.writeObject(new SearchRequestMessage(CLIENTE_NAME, findStr));
+                    out.flush();
+                    waitingForResult = true;
+                    System.out.println("- Search called");
+                } else
+                    System.out.println("Already waiting for a search result.");
+            } else
+                System.out.println("Unable to send message, client not connected to the server.");
         } catch (IOException | NullPointerException e) {
             System.out.println("sendSearchRequest(): Unable to send request, check connection to the server.");
             JOptionPane.showMessageDialog(null,"sendSearchRequest(): Unable to send request, check connection to the server.");
@@ -75,16 +92,24 @@ public class Client {
             InetAddress address = InetAddress.getByName(SERVER_NAME);
             socket = new Socket(address, SERVER_PORT);
             out = new ObjectOutputStream(socket.getOutputStream());
+            out.writeObject(new OtherRequestMessage(MessageType.CLIENT, null));
             clientOnline = true;
+        } catch ( ConnectException e) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e1) {
+                e1.printStackTrace();
+            }
+            doConnections();
         } catch ( IOException e ) {
-            System.out.println("Client failed to connect with server.");
-            JOptionPane.showMessageDialog(null, "Client failed to connect with server.");
+            System.out.println("Client failed to complete connection with server.");
+            JOptionPane.showMessageDialog(null, "Client failed to complete connection with server.");
             gui.disposeGUI();
             System.exit(0);
         }
     }
 
-    public void getClientHistory() {
+    public  void getClientHistory() {
         try {
             out.writeObject(new OtherRequestMessage(MessageType.HISTORY, CLIENTE_NAME));
         } catch (IOException | NullPointerException e) {

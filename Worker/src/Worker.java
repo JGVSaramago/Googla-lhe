@@ -2,6 +2,7 @@ import lib.*;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.Socket;
 
@@ -16,38 +17,22 @@ public class Worker {
     private boolean workerOnline = false;
 
     public Worker() {
-        try {
-            startClient();
-        } finally {
-            if (workerOnline) closeConnections();
-        }
+        startWorker();
+        System.out.println("Worker main closing...");
     }
 
     public boolean isOnline() {
         return workerOnline;
     }
 
-    public void resetCounters(){
-        counter = 0;
-        counter2 = 0;
-    }
-
-    private void closeConnections() {
-        try {
-            socket.close();
-        } catch (IOException | NullPointerException e) {
-            System.out.println("Unable to disconnect Worker.");
-        }
-    }
-
-    private void startClient() {
+    public synchronized void startWorker() {
+        System.out.println("Trying to connect with server...");
         doConnections();
         if (workerOnline) {
             System.out.println("Connections established");
             startSearchResultsReceiver();
             System.out.println("Receiver started");
-            while (workerOnline) {}
-            closeConnections();
+            System.out.println(workerOnline);
         }
     }
 
@@ -63,15 +48,22 @@ public class Worker {
             out = new ObjectOutputStream(socket.getOutputStream());
             out.writeObject(new OtherRequestMessage(MessageType.WORKER, null));
             workerOnline = true;
+        } catch ( ConnectException e) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e1) {
+                e1.printStackTrace();
+            }
+            doConnections();
         } catch ( IOException e ) {
-            System.out.println("Worker failed to connect with server.");
+            System.out.println("Worker failed to complete connection with server.");
         }
     }
 
-    public void searchArticle(Article article, String findStr, int searchActivityID, int WORKER_ID) {
+    public synchronized void searchArticle(Article article, String findStr, int searchActivityID, int WORKER_ID) {
         System.out.println("Searching article");
         boolean occurrenceFound = false;
-        SearchedArticle searchedArticle = new SearchedArticle(new ArticleTitle(article.getID(), article.getTitle()), searchActivityID);
+        SearchedArticle searchedArticle = new SearchedArticle(new ArticleTitle(article.getID(), article.getTitle()));
         int lastIndex = 0;
         String text = article.getTitle().toLowerCase();
         while(lastIndex != -1){
@@ -83,7 +75,7 @@ public class Worker {
             }
         }
         lastIndex = 0;
-        int titleOffset = searchedArticle.getTitle().length()+2; //+2 é para os dois enter
+        int titleOffset = searchedArticle.getTitle().length()+2; //+2 é para os dois enter's
         text = article.getBody().toLowerCase();
         while(lastIndex != -1){
             lastIndex = text.indexOf(findStr.toLowerCase(),lastIndex);
@@ -93,7 +85,8 @@ public class Worker {
                 lastIndex += findStr.length();
             }
         }
-        System.out.println("  Searched "+(++counter)+" articles.");
+        counter++;
+        System.out.println("  Searched "+(counter)+" articles.");
         if (occurrenceFound) {
             System.out.println("    occurrenceFound");
             sendResult(searchedArticle, searchActivityID, WORKER_ID);
@@ -115,7 +108,8 @@ public class Worker {
             out.writeObject(new WorkerResultMessage(searchedArticle, searchActivityID, WORKER_ID));
             out.flush();
             System.out.println("      Worker: object sent");
-            System.out.println("        Sent "+(++counter2)+" articles.");
+            counter2++;
+            System.out.println("        Sent "+(counter2)+" articles.");
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -1,7 +1,4 @@
-import lib.ArticleBody;
-import lib.ClientHistoryMessage;
-import lib.OtherRequestMessage;
-import lib.SearchResultMessage;
+import lib.*;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -29,27 +26,29 @@ public class ClientStreamer extends Thread {
         }
     }
 
+
     @Override
     public void run() {
         while (client.isClientOnline()){
             try {
                 Object message = in.readObject();
                 if (message instanceof SearchResultMessage) {
-                    System.out.println("Received search result");
+                    System.out.println("  Received search result");
+                    client.receivedSearchAnswer();
                     gui.showSearchResults((SearchResultMessage) message);
                 } else if (message instanceof ArticleBody){
                     gui.setArticleBody((ArticleBody) message);
                 } else if (message instanceof ClientHistoryMessage){
                     gui.createClientHistory(((ClientHistoryMessage) message).getClientHistory());
-                } else if (message instanceof OtherRequestMessage){
-                    switch (((OtherRequestMessage) message).getType()){
-                        default:
-                            break;
-                    }
+                } else if (message instanceof ServerUnavailableMessage){
+                    client.receivedSearchAnswer();
+                    System.out.println("ClientStreamer: Server unavailable.");
                 }
             } catch (IOException e) {
                 System.out.println("ClientStreamer: Client disconnected from the server.");
-                return;
+                if (client.isClientOnline())
+                    client.startClient();
+                break;
             } catch (ClassNotFoundException e) {
                 System.out.println("ClientStreamer: Class unknown or not the same as the one in the server.");
             }

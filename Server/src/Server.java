@@ -13,8 +13,10 @@ public class Server {
     private ServerGUI gui;
     private static final int PORT = 8080;
     private int clientsConnected = 0;
+    private int workersConnected = 0;
 
     private ArrayList<ServerStreamer> workers = new ArrayList<>();
+    private ArrayList<ServerStreamer> clients = new ArrayList<>();
 
     public Server() {
         gui = new ServerGUI(this);
@@ -26,21 +28,54 @@ public class Server {
         }
     }
 
-    public void addWorker(ServerStreamer worker) {
-        workers.add(worker);
-        searchEngine.startWorkerManager(worker);
+    public int getWorkersConnected() {
+        return workersConnected;
     }
 
     public int getClientsConnected() {
         return clientsConnected;
     }
 
-    public void minusClient() {
-        if (clientsConnected > 0) {
-            clientsConnected--;
-            gui.updateLabel();
-        } else
-            System.out.println("Error: Already with 0 clients online.");
+    public WorkerManager addWorker(ServerStreamer worker) {
+        workers.add(worker);
+        objectConnected(MessageType.WORKER);
+        return searchEngine.startWorkerManager(worker);
+    }
+
+    public void addClient(ServerStreamer client) {
+        clients.add(client);
+        objectConnected(MessageType.CLIENT);
+    }
+
+    public void objectDisconnected(ServerStreamer serverStreamer) {
+        if (serverStreamer.getConnectionType().equals(MessageType.CLIENT)) {
+            if (clientsConnected > 0) {
+                clientsConnected--;
+                clients.remove(serverStreamer);
+                gui.addLogToGUI(getDateStamp()+" - Client disconnected.");
+            } else
+                System.out.println("Error: Already with 0 clients online.");
+        } else if (serverStreamer.getConnectionType().equals(MessageType.WORKER)) {
+            if (workersConnected > 0) {
+                workersConnected--;
+                serverStreamer.getWorkerManager().setOffline();
+                workers.remove(serverStreamer);
+                gui.addLogToGUI(getDateStamp()+" - Worker disconnected.");
+            } else
+                System.out.println("Error: Already with 0 clients online.");
+        }
+        gui.updateLabel();
+    }
+
+    public void objectConnected(MessageType objectType) {
+        if (objectType.equals(MessageType.CLIENT)) {
+            clientsConnected++;
+            gui.addLogToGUI(getDateStamp()+" - Client connected.");
+        } else if (objectType.equals(MessageType.WORKER)) {
+            workersConnected++;
+            gui.addLogToGUI(getDateStamp()+" - Worker connected.");
+        }
+        gui.updateLabel();
     }
 
     private void startServing() throws IOException {
@@ -50,11 +85,8 @@ public class Server {
             s = new ServerSocket(PORT);
             while (true) {
                 socket = s.accept();
-                clientsConnected++;
-                gui.updateLabel();
-                gui.addLogToGUI(getDateStamp()+" - Client connected.");
-                ServerStreamer client = new ServerStreamer(socket, this);
-                client.start();
+                ServerStreamer serverStreamer = new ServerStreamer(socket, this);
+                serverStreamer.start();
             }
         } finally { // executa quer existe exception ou nao
             if (socket != null) socket.close();
@@ -68,15 +100,26 @@ public class Server {
 
     public void doSearch(SearchRequestMessage searchRequestMessage, ServerStreamer client) {
         String findStr = searchRequestMessage.getFindStr();
-        File file = new File("src/history.txt");
-        file.getParentFile().mkdirs();
         String searchHist = searchRequestMessage.getUsername()+"|"+findStr+"|"+getDateStamp();
-        try {
-            PrintWriter printWriter = new PrintWriter(new FileOutputStream(file, true));
-            printWriter.println(searchHist);
-            printWriter.close();
-        } catch (FileNotFoundException e) {
-            System.out.println("History file not found.");
+        Thread writeToFile = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                File file = new File("src/history.txt");
+                file.getParentFile().mkdirs();
+                try {
+                    PrintWriter printWriter = new PrintWriter(new FileOutputStream(file, true));
+                    printWriter.println(searchHist);
+                    printWriter.close();
+                    System.out.println("write to history complete");
+                } catch (FileNotFoundException e) {
+                    System.out.println("History file not found.");
+                }
+            }
+        });
+        writeToFile.start();
+        if (workers.size() == 0) {
+            client.sendServerMessage(new ServerUnavailableMessage());
+            return;
         }
         System.out.println("Server: doSearch");
         searchEngine.search(findStr, searchHist.split("\\|"), client);
@@ -136,10 +179,6 @@ public class Server {
 
     public void addResultFromWorker(WorkerResultMessage workerResultMessage){
             searchEngine.addResultFromWorker(workerResultMessage);
-    }
-
-    public void setWorkerDisponible(int WORKER_ID) {
-        searchEngine.setWorkerDisponible(WORKER_ID);
     }
 }
 

@@ -1,6 +1,7 @@
 import lib.*;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 
 public class ServerGUI {
@@ -28,16 +29,16 @@ public class ServerGUI {
     }
 
     private void buildGUI() {
-        //buildMenu();
         buildCenter();
         buildBottomBar();
     }
 
     private void buildCenter(){
         JLabel logLabel = new JLabel("Logs:");
+        logLabel.setBorder(new EmptyBorder(5,5,5,5));
         textPane = new JTextPane();
         textPane.setEditable(false);
-        textPane.setMargin(new Insets(10,3,10,3));
+        textPane.setMargin(new Insets(3,3,3,3));
         JScrollPane scrollPane = new JScrollPane(textPane);
         scrollPane.setPreferredSize(new Dimension(500, 300));
         frame.add(logLabel, BorderLayout.NORTH);
@@ -46,11 +47,12 @@ public class ServerGUI {
 
     private void buildBottomBar(){
         label = new JLabel("Clients connected: "+server.getClientsConnected());
+        label.setBorder(new EmptyBorder(5,5,5,5));
         frame.add(label, BorderLayout.SOUTH);
     }
 
     public void updateLabel(){
-        label.setText("Clients connected: "+server.getClientsConnected());
+        label.setText("Clients connected: "+server.getClientsConnected()+"     Workers connected: "+server.getWorkersConnected());
     }
 
 }

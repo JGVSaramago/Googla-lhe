@@ -36,7 +36,8 @@ public class WorkerStreamer extends Thread{
                 }
             } catch (IOException | ClassNotFoundException e) {
                 System.out.println("WorkerStreamer: Worker disconnected from the server.");
-                System.exit(0);
+                worker.startWorker();
+                return;
             }
         }
         System.out.println("WorkerStreamer: Closing...");

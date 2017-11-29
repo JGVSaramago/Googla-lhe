@@ -2,7 +2,7 @@ package lib;
 
 public enum MessageType {
 
-    HISTORY(1), WORKER(2), CLEANHISTORY(3), CLOSE(10);
+    HISTORY(1), WORKER(2), CLEANHISTORY(3), CLIENT(4), CLOSE(10);
 
     private final int messageType;
 

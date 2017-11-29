@@ -5,32 +5,43 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class SearchActivity {
 
-    private int counter = 0;
-
-    private final int ID;
+    private final int searchActivityID;
     private ArrayList<SearchedArticle> results = new ArrayList<>();
-    private int occurrencesFound = 0;
-    private int filesWithOccurrences = 0;
+    private ArrayList<RequestToWorkerMessage> pendingSearches = new ArrayList<>();
+    private volatile int occurrencesFound = 0;
+    private AtomicInteger filesWithOccurrences = new AtomicInteger(0);
     private String[] searchHist;
 
+    private final int articlesCount;
     private AtomicInteger articlesLeft;
+    private AtomicInteger articlesReceived;
     private ServerStreamer client;
     private String findStr;
 
-    public SearchActivity(int ID, int articlesLeft, ServerStreamer client, String findStr, String[] searchHist) {
-        this.ID = ID;
+    public SearchActivity(int searchActivityID, int articlesLeft, ServerStreamer client, String findStr, String[] searchHist) {
+        this.searchActivityID = searchActivityID;
         this.articlesLeft = new AtomicInteger(articlesLeft);
+        articlesReceived = new AtomicInteger(articlesLeft);
         this.client = client;
         this.findStr = findStr;
         this.searchHist = searchHist;
+        articlesCount = articlesLeft;
     }
 
-    public int getID() {
-        return ID;
+    public int getSearchActivityID() {
+        return searchActivityID;
+    }
+
+    public int getArticlesReceived() {
+        return articlesReceived.get();
     }
 
     public ArrayList<SearchedArticle> getResults() {
         return results;
+    }
+
+    public ArrayList<RequestToWorkerMessage> getPendingSearches() {
+        return pendingSearches;
     }
 
     public int getOccurrencesFound() {
@@ -38,7 +49,7 @@ public class SearchActivity {
     }
 
     public int getFilesWithOccurrences() {
-        return filesWithOccurrences;
+        return filesWithOccurrences.get();
     }
 
     public String[] getSearchHist() {
@@ -59,13 +70,23 @@ public class SearchActivity {
 
     public void decrementArticesLeft() {
         if (articlesLeft.decrementAndGet() < 0)
-            System.out.println("SearchActivity "+ID+": articlesLeft is "+getArticlesLeft());
+            System.out.println("SearchActivity "+ searchActivityID +": articlesLeft is "+getArticlesLeft());
     }
 
-    public void addResult(SearchedArticle sa) {
+    public void incrementArticlesReceived() {
+        if (articlesReceived.incrementAndGet() > articlesCount)
+            System.out.println("SearchActivity: This should be impossible "+articlesReceived.get());
+    }
+
+    public synchronized void addResult(SearchedArticle sa) {
         results.add(sa);
         occurrencesFound += sa.getOccurrencesCount();
-        filesWithOccurrences++;
+        filesWithOccurrences.incrementAndGet();
+        incrementArticlesReceived();
+    }
+
+    public void addPendingSearch(RequestToWorkerMessage rtwm) {
+        pendingSearches.add(rtwm);
     }
 
 

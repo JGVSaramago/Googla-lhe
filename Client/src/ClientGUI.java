@@ -8,6 +8,7 @@ import javax.swing.text.DefaultHighlighter;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
+import java.util.Comparator;
 
 import static lib.ThemeEngine.setDarkTheme;
 import static lib.ThemeEngine.setLightTheme;
@@ -40,7 +41,7 @@ public class ClientGUI {
         frame.addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
             public void windowClosing(java.awt.event.WindowEvent windowEvent) {
-                client.setOffline();
+                client.disconnect();
                 disposeGUI();
             }
         });
@@ -169,7 +170,6 @@ public class ClientGUI {
             public void actionPerformed(ActionEvent e) {
                 findStr = searchInput.getText();
                 client.sendSearchRequest(findStr);
-                System.out.println("Search called");
             }
         });
         frame.getRootPane().setDefaultButton(searchButton);
@@ -211,7 +211,14 @@ public class ClientGUI {
             @Override
             public void run() {
                 DefaultListModel<SearchedArticle> list = new DefaultListModel<>();
-                for (SearchedArticle searchedArticle : searchResultMessage.getSearchResults())
+                ArrayList<SearchedArticle> results = searchResultMessage.getSearchResults();
+                results.sort(new Comparator<SearchedArticle>() {
+                    @Override
+                    public int compare(SearchedArticle o1, SearchedArticle o2) {
+                        return o1.getOccurrencesCount()-o2.getOccurrencesCount();
+                    }
+                });
+                for (SearchedArticle searchedArticle : results)
                     list.addElement(searchedArticle);
                 newsList.removeListSelectionListener(listSelectionListener);
                 newsList.setModel(list);
@@ -264,7 +271,8 @@ public class ClientGUI {
                 item.addActionListener(new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
-                        client.sendSearchRequest(line[1]);
+                        findStr = line[1];
+                        client.sendSearchRequest(findStr);
                         System.out.println("Search called");
                     }
                 });

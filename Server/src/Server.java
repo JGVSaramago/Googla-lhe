@@ -9,8 +9,6 @@ import java.util.Date;
 
 public class Server {
 
-    int counter = 0;
-
     private SearchEngine searchEngine;
     private ServerGUI gui;
     private static final int PORT = 8080;
@@ -98,14 +96,16 @@ public class Server {
             @Override
             public void run() {
                 File file = new File("src/history.txt");
-                file.getParentFile().mkdirs();
-                try {
-                    PrintWriter printWriter = new PrintWriter(new FileOutputStream(file, true));
-                    printWriter.println(searchHist);
-                    printWriter.close();
-                    System.out.println("write to history complete");
-                } catch (FileNotFoundException e) {
-                    System.out.println("History file not found.");
+                synchronized (file) {
+                    file.getParentFile().mkdirs();
+                    try {
+                        PrintWriter printWriter = new PrintWriter(new FileOutputStream(file, true));
+                        printWriter.println(searchHist);
+                        printWriter.close();
+                        System.out.println("write to history complete");
+                    } catch (FileNotFoundException e) {
+                        System.out.println("History file not found.");
+                    }
                 }
             }
         });
@@ -172,8 +172,6 @@ public class Server {
 
     public synchronized void addResultFromWorker(WorkerResultMessage workerResultMessage){
         searchEngine.addResultFromWorker(workerResultMessage);
-        counter++;
-        System.out.println("Server added: "+counter);
     }
 }
 

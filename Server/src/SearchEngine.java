@@ -15,8 +15,6 @@ public class SearchEngine {
     private ArrayList<Article> articles = new ArrayList<>();
     private volatile ArrayList<SearchActivity> searchActivities = new ArrayList<>();
 
-    private volatile ArrayList<Integer> checkIfRepeatedArticlesSent = new ArrayList<>();
-
 
     public SearchEngine() {
         txtToObject(); // Os ficheiros são todos transformados em objetos assim sempre que for feita uma pesquisa não é preciso ir ler tudo outra vez
@@ -86,7 +84,7 @@ public class SearchEngine {
                 if (artLeft < 0) {
                     ArrayList<ArticleToSearch> arrATS = s.getPendingSearches();
                     if (arrATS.isEmpty()) {
-                        waitForAllAnswers(s);
+                        //waitForAllAnswers(s);
                         return null;
                     } else {
                         ArticleToSearch ats = arrATS.get(0);
@@ -96,7 +94,6 @@ public class SearchEngine {
                     }
                     // TODO search pending searches
                 } else {
-                    checkIfRepeatedArticlesSent.add(artLeft);
                     s.decrementArticesLeft();
                     return new ArticleToSearch(s.getSearchActivityID(), articles.get(artLeft), s.getFindStr());
                 }
@@ -108,22 +105,6 @@ public class SearchEngine {
     private synchronized void sendToClient(SearchActivity s) {
         searchActivities.removeIf(sa -> sa.equals(s)); //removes SearchActivity 'sa' if it is equal to the SearchActivity given 's'
         System.out.println("-------Pesquisas no arraylist: "+searchActivities.size());
-        int counter = 0;
-        for (Integer i: checkIfRepeatedArticlesSent) { //Just to checkIfRepeatedArticlesSent if there is happening repeated searches
-            for (Integer e : checkIfRepeatedArticlesSent) {
-                if (i.equals(e)) {
-                    counter++;
-                    if (counter>=2)
-                        System.out.println("This should not happen, the same article was searched "+counter+" times");
-                }
-            }
-            counter = 0;
-        }
-        int count = 0;
-        for (SearchedArticle b: s.getResults())
-            count+=b.getOccurrencesCount();
-        System.out.println("Occurrences found: "+count);
-        checkIfRepeatedArticlesSent = new ArrayList<>();
         s.getClient().sendServerMessage( new SearchResultMessage( s.getResults(), s.getOccurrencesFound(), s.getFilesWithOccurrences(), s.getSearchHist()));
     }
 
@@ -133,17 +114,19 @@ public class SearchEngine {
     }
 
     public synchronized void addResultFromWorker(WorkerResultMessage wrm) {
-        for (SearchActivity s: searchActivities){
-            if (s.getSearchActivityID() == wrm.getSearchActivityID()) {
-                s.addResult(wrm.getSearchedArticle());
-            }
-        }
+        for (SearchActivity s: searchActivities)
+            if (s.getSearchActivityID() == wrm.getSearchActivityID())
+                if (!s.addResult(wrm.getSearchedArticle())) {
+                    sendToClient(s); // esta funcao edita o arraylist por isso quando executada o ciclo foreach deve ser logo parado
+                    return; // encontrou a searchActivity pertendida por isso já nao precisa de continuar o ciclo
+                }
     }
 
     public void addPendingSearchToActivity(RequestToWorkerMessage rtwm) {
         for (SearchActivity s: searchActivities){
             if (s.getSearchActivityID() == rtwm.getArticleToSearch().getSearchActivityID()) {
                 s.addPendingSearch(rtwm.getArticleToSearch());
+                return; // encontrou a searchActivity pertendida por isso já nao precisa de continuar o ciclo
             }
         }
     }
@@ -158,23 +141,11 @@ public class SearchEngine {
     public void articleReceived(int searchActivityID) {
         for (SearchActivity s: searchActivities)
             if (s.getSearchActivityID() == searchActivityID)
-                s.incrementArticlesReceived();
-    }
+                if (!s.incrementArticlesReceived()) { //devolve false se o numero de articos recebidos for igual ao de enviados
+                    sendToClient(s);
+                    return; // encontrou a searchActivity pertendida por isso já nao precisa de continuar o ciclo
+                }
 
-    public void waitForAllAnswers(SearchActivity s) {
-        System.out.println("SearchEngine: Waiting for all answers to SearchActivity "+s.getSearchActivityID());
-        Thread t = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (true)
-                    if (s.getArticlesReceived() >= articles.size()) {
-                        System.out.println(s.getArticlesReceived()+" >= "+articles.size());
-                        sendToClient(s);
-                        return;
-                    }
-            }
-        });
-        t.start();
     }
 
 }

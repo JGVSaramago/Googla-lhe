@@ -84,18 +84,21 @@ public class SearchActivity {
             System.out.println("SearchActivity "+ searchActivityID +": articlesLeft is "+getArticlesLeft());
     }
 
-    public synchronized void incrementArticlesReceived() {
+    public synchronized boolean incrementArticlesReceived() {
         counter++;
         System.out.println("Incremented "+counter+" times.");
         if (articlesReceived.incrementAndGet() > articlesCount)
             System.out.println("SearchActivity: This should be impossible "+articlesReceived.get()+">"+articlesCount);
+        if (articlesReceived.get() >= articlesCount)
+            return false;
+        return true;
     }
 
-    public synchronized void addResult(SearchedArticle sa) {
+    public synchronized boolean addResult(SearchedArticle sa) {
         results.add(sa);
         occurrencesFound += sa.getOccurrencesCount();
         filesWithOccurrences.incrementAndGet();
-        incrementArticlesReceived();
+        return incrementArticlesReceived();
     }
 
     public void addPendingSearch(ArticleToSearch ats) {

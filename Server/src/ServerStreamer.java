@@ -5,8 +5,6 @@ import java.net.Socket;
 
 public class ServerStreamer extends Thread{
 
-    private int counter = 0;
-
     private Socket socket;
     private Server server;
     private ObjectInputStream in;
@@ -24,10 +22,6 @@ public class ServerStreamer extends Thread{
         return username;
     }
 
-    public MessageType getConnectionType() {
-        return connectionType;
-    }
-
     public WorkerManager getWorkerManager() {
         return workerManager;
     }
@@ -40,22 +34,6 @@ public class ServerStreamer extends Thread{
         }
     }
 
-    private void addResultToWorker(WorkerResultMessage message) {
-        Thread t = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (true) {
-                    counter++;
-                    System.out.println("ID " + workerManager.getID() + " recebido: " + counter);
-                    setWorkerDisponible();
-                    System.out.println("    Received result from worker");
-                    server.addResultFromWorker(message);
-                }
-            }
-        });
-        t.start();
-    }
-
     @Override
     public void run() {
         try {
@@ -65,16 +43,12 @@ public class ServerStreamer extends Thread{
                 try {
                     Object message = in.readObject();
                     if (message instanceof WorkerResultMessage) {
-                        counter++;
-                        System.out.println("ID " + workerManager.getID() + " recebido: " + counter);
                         setWorkerDisponible();
                         System.out.println("    Received result from worker");
                         server.addResultFromWorker((WorkerResultMessage) message);
                     } else if (message instanceof SetWorkerDisponibleMessage) {
                         setWorkerDisponible();
                         workerManager.articleWithNoOccurrences();
-                        //counter++;
-                        System.out.println(counter);
                     } else if (message instanceof SearchRequestMessage) {
                         server.doSearch((SearchRequestMessage) message, this);
                     } else if (message instanceof BodyRequestMessage){
@@ -82,7 +56,8 @@ public class ServerStreamer extends Thread{
                         System.out.println("BodyRequestReceived for article "+articleID);
                         sendServerMessage(server.getArticleBody(articleID));
                     } else if (message instanceof OtherRequestMessage){
-                        MessageType type = ((OtherRequestMessage) message).getType();
+                        OtherRequestMessage msg = ((OtherRequestMessage) message);
+                        MessageType type = msg.getType();
                         switch (type){
                             case WORKER:
                                 connectionType = type;
@@ -90,6 +65,7 @@ public class ServerStreamer extends Thread{
                                 break;
                             case CLIENT:
                                 connectionType = type;
+                                username = msg.getUsername();
                                 server.addClient(this);
                                 break;
                             case HISTORY:
@@ -121,13 +97,20 @@ public class ServerStreamer extends Thread{
         try {
             socket.close();
             if (socket.isClosed()) {
-                System.out.println("ServerStreamer: Object disconnected from server.");
-                server.objectDisconnected(this);
-
+                if (connectionType.equals(MessageType.CLIENT)) {
+                    server.disconnectClient(this);
+                    System.out.println("ServerStreamer: Client "+username+" disconnected from server.");
+                } else {
+                    server.disconnectWorker(this);
+                    System.out.println("ServerStreamer: Worker disconnected from server.");
+                }
             } else
                 System.out.println("ServerStreamer: Unable to close object socket in the server.");
         } catch (IOException e) {
-            server.objectDisconnected(this);
+            if (connectionType.equals(MessageType.CLIENT))
+                server.disconnectClient(this);
+            else
+                server.disconnectWorker(this);
             System.out.println("ServerStreamer: Object not properly disconnected from server.");
         }
     }

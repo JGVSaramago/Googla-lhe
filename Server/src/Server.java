@@ -14,8 +14,6 @@ public class Server {
     private SearchEngine searchEngine;
     private ServerGUI gui;
     private static final int PORT = 8080;
-    private int clientsConnected = 0;
-    private int workersConnected = 0;
 
     private ArrayList<ServerStreamer> workers = new ArrayList<>();
     private ArrayList<ServerStreamer> clients = new ArrayList<>();
@@ -31,52 +29,45 @@ public class Server {
     }
 
     public int getWorkersConnected() {
-        return workersConnected;
+        return workers.size();
     }
 
     public int getClientsConnected() {
-        return clientsConnected;
+        return clients.size();
     }
 
     public WorkerManager addWorker(ServerStreamer worker) {
         workers.add(worker);
-        objectConnected(MessageType.WORKER);
+        gui.addLogToGUI(getDateStamp()+" - Worker connected.");
+        gui.updateLabel();
         return searchEngine.startWorkerManager(worker);
+    }
+
+    public void disconnectWorker(ServerStreamer worker) {
+        if (!workers.isEmpty()) {
+            worker.getWorkerManager().setOffline();
+            workers.remove(worker);
+            gui.addLogToGUI(getDateStamp() + " - Worker disconnected.");
+            if (workers.isEmpty())
+                for (ServerStreamer client : clients)
+                    client.sendServerMessage(new ServerUnavailableMessage());
+        } else
+            System.out.println("Error: Already with 0 workers online.");
+        gui.updateLabel();
     }
 
     public void addClient(ServerStreamer client) {
         clients.add(client);
-        objectConnected(MessageType.CLIENT);
-    }
-
-    public void objectDisconnected(ServerStreamer serverStreamer) {
-        if (serverStreamer.getConnectionType().equals(MessageType.CLIENT)) {
-            if (clientsConnected > 0) {
-                clientsConnected--;
-                clients.remove(serverStreamer);
-                gui.addLogToGUI(getDateStamp()+" - Client disconnected.");
-            } else
-                System.out.println("Error: Already with 0 clients online.");
-        } else if (serverStreamer.getConnectionType().equals(MessageType.WORKER)) {
-            if (workersConnected > 0) {
-                workersConnected--;
-                serverStreamer.getWorkerManager().setOffline();
-                workers.remove(serverStreamer);
-                gui.addLogToGUI(getDateStamp()+" - Worker disconnected.");
-            } else
-                System.out.println("Error: Already with 0 clients online.");
-        }
+        gui.addLogToGUI(getDateStamp()+" - Client "+client.getUsername()+" connected.");
         gui.updateLabel();
     }
 
-    public void objectConnected(MessageType objectType) {
-        if (objectType.equals(MessageType.CLIENT)) {
-            clientsConnected++;
-            gui.addLogToGUI(getDateStamp()+" - Client connected.");
-        } else if (objectType.equals(MessageType.WORKER)) {
-            workersConnected++;
-            gui.addLogToGUI(getDateStamp()+" - Worker connected.");
-        }
+    public void disconnectClient(ServerStreamer client) {
+        if (!clients.isEmpty()) {
+            clients.remove(client);
+            gui.addLogToGUI(getDateStamp()+" - Client "+client.getUsername()+" disconnected.");
+        } else
+            System.out.println("Error: Already with 0 clients online.");
         gui.updateLabel();
     }
 

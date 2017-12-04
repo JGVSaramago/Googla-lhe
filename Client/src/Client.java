@@ -24,14 +24,15 @@ public class Client {
         this.gui = new ClientGUI(this);
         this.CLIENTE_NAME = CLIENTE_NAME;
         startClient();
-        System.out.println("Main client closing...");
+        System.out.println("Main thread closing...");
     }
 
     public void disconnect() {
         System.out.println("Disconnecting client from server...");
         clientOnline = false;
         closeConnections();
-        // TODO se desligar o servidor e depois o cliente, o cliente nao fecha
+        System.out.println("Exiting program...");
+        System.exit(0);
     }
 
     public boolean isClientOnline() {
@@ -93,7 +94,7 @@ public class Client {
             InetAddress address = InetAddress.getByName(SERVER_NAME);
             socket = new Socket(address, SERVER_PORT);
             out = new ObjectOutputStream(socket.getOutputStream());
-            out.writeObject(new OtherRequestMessage(MessageType.CLIENT, null));
+            out.writeObject(new OtherRequestMessage(MessageType.CLIENT, CLIENTE_NAME));
             clientOnline = true;
         } catch ( ConnectException e) {
             try {

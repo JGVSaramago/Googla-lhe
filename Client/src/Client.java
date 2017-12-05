@@ -78,7 +78,7 @@ public class Client {
                     out.writeObject(new SearchRequestMessage(CLIENTE_NAME, findStr));
                     out.flush();
                     waitingForResult = true;
-                    System.out.println("- Search called");
+                    System.out.println("<- Search called");
                 } else
                     System.out.println("Already waiting for a search result.");
             } else

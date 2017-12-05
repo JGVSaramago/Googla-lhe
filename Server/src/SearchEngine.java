@@ -7,6 +7,11 @@ import java.util.Iterator;
 
 public class SearchEngine {
 
+    private Scheduler scheduler;
+
+    private long startTime;
+    private long endTime;
+
     private int searchActivityIDcounter = 0;
     private int workerManagerIDcounter = 0;
 
@@ -18,6 +23,7 @@ public class SearchEngine {
 
     public SearchEngine() {
         txtToObject(); // Os ficheiros são todos transformados em objetos assim sempre que for feita uma pesquisa não é preciso ir ler tudo outra vez
+        scheduler = new Scheduler(searchActivities);
     }
 
     public ArrayList<Article> getArticles() {
@@ -79,12 +85,11 @@ public class SearchEngine {
     public ArticleToSearch getArticleToSearch(){
         synchronized (searchActivities) {
             if (!searchActivities.isEmpty()) {
-                SearchActivity s = searchActivities.get(0);
+                SearchActivity s = scheduler.next();
                 int artLeft = s.getArticlesLeft();
                 if (artLeft < 0) {
                     ArrayList<ArticleToSearch> arrATS = s.getPendingSearches();
                     if (arrATS.isEmpty()) {
-                        //waitForAllAnswers(s);
                         return null;
                     } else {
                         ArticleToSearch ats = arrATS.get(0);
@@ -104,11 +109,14 @@ public class SearchEngine {
 
     private synchronized void sendToClient(SearchActivity s) {
         searchActivities.removeIf(sa -> sa.equals(s)); //removes SearchActivity 'sa' if it is equal to the SearchActivity given 's'
+        endTime = System.nanoTime();
+        System.out.println("Search done in: "+(endTime-startTime)/1E6);
         System.out.println("-------Pesquisas no arraylist: "+searchActivities.size());
         s.getClient().sendServerMessage( new SearchResultMessage( s.getResults(), s.getOccurrencesFound(), s.getFilesWithOccurrences(), s.getSearchHist()));
     }
 
     public synchronized void search(String findStr, String[] searchHist, ServerStreamer client) {
+        startTime = System.nanoTime();
         searchActivities.add(new SearchActivity(searchActivityIDcounter++, articles.size(), client, findStr, searchHist));
         notifyAll();
     }

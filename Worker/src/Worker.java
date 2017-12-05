@@ -8,8 +8,6 @@ import java.net.Socket;
 
 public class Worker {
 
-    private int counter = 0;
-    private int counter2 = 0;
     private static final String SERVER_NAME = "localhost";
     private static final int SERVER_PORT = 8080;
     private Socket socket;
@@ -85,8 +83,6 @@ public class Worker {
                 lastIndex += findStr.length();
             }
         }
-        counter++;
-        System.out.println("  Searched "+(counter)+" articles.");
         if (occurrenceFound) {
             System.out.println("    occurrenceFound");
             sendResult(searchedArticle, searchActivityID, WORKER_ID);
@@ -108,8 +104,6 @@ public class Worker {
             out.writeObject(new WorkerResultMessage(searchedArticle, searchActivityID, WORKER_ID));
             out.flush();
             System.out.println("      Worker: object sent");
-            counter2++;
-            System.out.println("        Sent "+(counter2)+" articles.");
         } catch (IOException e) {
             e.printStackTrace();
         }

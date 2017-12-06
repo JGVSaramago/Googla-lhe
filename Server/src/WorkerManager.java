@@ -28,7 +28,6 @@ public class WorkerManager extends Thread {
 
     public void setAvailable() {
         available = true;
-        //searchEngine.articleReceived(lastSearchActivityID);
     }
 
     public void articleWithNoOccurrences() {
@@ -62,7 +61,7 @@ public class WorkerManager extends Thread {
     }
 
     private synchronized void sendSearchToWorker(ArticleToSearch a) {
-        lastMessageSent = new RequestToWorkerMessage(a, ID);
+        lastMessageSent = new RequestToWorkerMessage(a);
         worker.sendServerMessage(lastMessageSent);
         System.out.println("  WorkerManeger "+ID+": sent search to worker ");
     }

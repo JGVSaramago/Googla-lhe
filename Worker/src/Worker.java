@@ -27,10 +27,9 @@ public class Worker {
         System.out.println("Trying to connect with server...");
         doConnections();
         if (workerOnline) {
-            System.out.println("Connections established");
+            System.out.println("  Connections established");
             startSearchResultsReceiver();
-            System.out.println("Receiver started");
-            System.out.println(workerOnline);
+            System.out.println("    Streamer started");
         }
     }
 
@@ -48,22 +47,22 @@ public class Worker {
             workerOnline = true;
         } catch ( ConnectException e) {
             try {
-                Thread.sleep(100);
+                Thread.sleep(500);
             } catch (InterruptedException e1) {
                 e1.printStackTrace();
             }
             doConnections();
         } catch ( IOException e ) {
-            System.out.println("Worker failed to complete connection with server.");
+            System.out.println("  Worker failed to complete connection with server.");
         }
     }
 
-    public synchronized void searchArticle(Article article, String findStr, int searchActivityID, int WORKER_ID) {
-        System.out.println("Searching article");
+    public synchronized void searchArticle(Article article, String findStr, int searchActivityID) {
+        System.out.println("-> Searching article");
         boolean occurrenceFound = false;
         SearchedArticle searchedArticle = new SearchedArticle(new ArticleTitle(article.getID(), article.getTitle()));
         int lastIndex = 0;
-        String text = article.getTitle().toLowerCase();
+        String text = article.getTitle().toLowerCase()+"\n\n"+article.getBody().toLowerCase();
         while(lastIndex != -1){
             lastIndex = text.indexOf(findStr.toLowerCase(),lastIndex);
             if(lastIndex != -1){
@@ -72,38 +71,27 @@ public class Worker {
                 lastIndex += findStr.length();
             }
         }
-        lastIndex = 0;
-        int titleOffset = searchedArticle.getTitle().length()+2; //+2 é para os dois enter's
-        text = article.getBody().toLowerCase();
-        while(lastIndex != -1){
-            lastIndex = text.indexOf(findStr.toLowerCase(),lastIndex);
-            if(lastIndex != -1){
-                occurrenceFound = true;
-                searchedArticle.addOccurrence(lastIndex + titleOffset);
-                lastIndex += findStr.length();
-            }
-        }
         if (occurrenceFound) {
-            System.out.println("    occurrenceFound");
-            sendResult(searchedArticle, searchActivityID, WORKER_ID);
+            System.out.println("  - File has occurrences");
+            sendResult(searchedArticle, searchActivityID);
         } else
-            sendWorkerDisponibleMessage(WORKER_ID);
+            sendWorkerDisponibleMessage();
     }
 
-    public synchronized void sendWorkerDisponibleMessage(int WORKER_ID) {
+    private synchronized void sendWorkerDisponibleMessage() {
         try {
-            out.writeObject(new SetWorkerDisponibleMessage(WORKER_ID));
+            out.writeObject(new SetWorkerDisponibleMessage());
             out.flush();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public synchronized void sendResult(SearchedArticle searchedArticle, int searchActivityID, int WORKER_ID){
+    private synchronized void sendResult(SearchedArticle searchedArticle, int searchActivityID){
         try {
-            out.writeObject(new WorkerResultMessage(searchedArticle, searchActivityID, WORKER_ID));
+            out.writeObject(new WorkerResultMessage(searchedArticle, searchActivityID));
             out.flush();
-            System.out.println("      Worker: object sent");
+            System.out.println("    <- Worker: Result sent");
         } catch (IOException e) {
             e.printStackTrace();
         }

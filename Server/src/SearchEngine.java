@@ -3,9 +3,15 @@ import lib.*;
 import javax.swing.text.html.HTMLDocument;
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 
 public class SearchEngine {
+
+    //cache searches so if the same search is requested again the SearchEngine already knows the solution
+    private boolean useCache = true;
+    private final Map<String, CacheSearch> cacheSearchMap = new HashMap<>();
 
     private Scheduler scheduler;
 
@@ -15,10 +21,10 @@ public class SearchEngine {
     private int searchActivityIDcounter = 0;
     private int workerManagerIDcounter = 0;
 
-    private ArrayList<WorkerManager> workerManagers = new ArrayList<>();
+    private final ArrayList<WorkerManager> workerManagers = new ArrayList<>();
 
-    private ArrayList<Article> articles = new ArrayList<>();
-    private volatile ArrayList<SearchActivity> searchActivities = new ArrayList<>();
+    private final ArrayList<Article> articles = new ArrayList<>();
+    private final ArrayList<SearchActivity> searchActivities = new ArrayList<>();
 
 
     public SearchEngine() {
@@ -26,12 +32,19 @@ public class SearchEngine {
         scheduler = new Scheduler(searchActivities);
     }
 
-    public ArrayList<Article> getArticles() {
-        return articles;
+    public boolean isUsingCache() {
+        return useCache;
     }
 
-    public ArrayList<SearchActivity> getSearchActivities() {
-        return searchActivities;
+    public void setUseCache(boolean useCache) {
+        this.useCache = useCache;
+    }
+
+    private CacheSearch checkAndGetCache(String findStr) {
+        if (!cacheSearchMap.isEmpty() && cacheSearchMap.containsKey(findStr)) {
+            return cacheSearchMap.get(findStr);
+        }
+        return null;
     }
 
     public ArticleBody getArticleBody(int id){
@@ -41,7 +54,6 @@ public class SearchEngine {
     private void txtToObject() {
         File dir = new File("news29out");
         File[] filesList = dir.listFiles();
-        System.out.println("files: "+filesList.length);
         if (filesList != null) {
             for (File file : filesList) {
                 BufferedReader reader = null;
@@ -79,7 +91,7 @@ public class SearchEngine {
         } else {
             System.out.println("No files in the directory.");
         }
-        System.out.println("files in array: "+articles.size());
+        System.out.println("Total files: "+articles.size());
     }
 
     public ArticleToSearch getArticleToSearch(){
@@ -97,7 +109,6 @@ public class SearchEngine {
                         System.out.println("Pending searches: "+arrATS.size());
                         return ats;
                     }
-                    // TODO search pending searches
                 } else {
                     s.decrementArticesLeft();
                     return new ArticleToSearch(s.getSearchActivityID(), articles.get(artLeft), s.getFindStr());
@@ -108,15 +119,25 @@ public class SearchEngine {
     }
 
     private synchronized void sendToClient(SearchActivity s) {
+        if (useCache)
+            cacheSearchMap.put(s.getFindStr(), new CacheSearch(s.getResults(), s.getOccurrencesFound(), s.getFilesWithOccurrences()));
         searchActivities.removeIf(sa -> sa.equals(s)); //removes SearchActivity 'sa' if it is equal to the SearchActivity given 's'
         endTime = System.nanoTime();
-        System.out.println("Search done in: "+(endTime-startTime)/1E6);
-        System.out.println("-------Pesquisas no arraylist: "+searchActivities.size());
         s.getClient().sendServerMessage( new SearchResultMessage( s.getResults(), s.getOccurrencesFound(), s.getFilesWithOccurrences(), s.getSearchHist()));
+        System.out.println("<- Search result sent to client (done in: "+(endTime-startTime)/1E6+"ms, active searches: "+searchActivities.size()+")");
     }
 
     public synchronized void search(String findStr, String[] searchHist, ServerStreamer client) {
         startTime = System.nanoTime();
+        if (useCache) {
+            CacheSearch cacheSearch = checkAndGetCache(findStr);
+            if (cacheSearch != null) {
+                endTime = System.nanoTime();
+                System.out.println("Search done in: "+(endTime-startTime)/1E6);
+                client.sendServerMessage(new SearchResultMessage(cacheSearch.getResults(), cacheSearch.getOccurrencesFound(), cacheSearch.getFilesWithOccurrences(), searchHist));
+                return;
+            }
+        }
         searchActivities.add(new SearchActivity(searchActivityIDcounter++, articles.size(), client, findStr, searchHist));
         notifyAll();
     }

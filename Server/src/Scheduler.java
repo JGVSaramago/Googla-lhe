@@ -9,15 +9,8 @@ public class Scheduler {
         this.searchActivities = searchActivities;
     }
 
-    //returns actual searchActivity or if there are no searches returns null
-    public SearchActivity actual() {
-        return searchActivity;
-    }
-
     public SearchActivity next() {
-        if (searchActivities.isEmpty())
-            searchActivity = null;
-        else if (searchActivity == null)
+        if (searchActivity == null)
             searchActivity = searchActivities.get(0);
         else {
             int actualID = searchActivities.indexOf(searchActivity);

@@ -261,6 +261,7 @@ public class ClientGUI {
     }
 
     public void createClientHistory(ArrayList<String[]> clientHist) {
+        buildMenu(); //easy fix for the duplicated client history in menu when server disconnects and reconnects to the same client
         clientHistory = clientHist;
         if (!clientHist.isEmpty()) {
             int arraysize = clientHistory.size();

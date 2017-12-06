@@ -3,6 +3,8 @@ import lib.*;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 public class ServerGUI {
 
@@ -33,7 +35,41 @@ public class ServerGUI {
         buildBottomBar();
     }
 
-    private void buildCenter(){
+    private void buildCenter() {
+        JPanel panel = new JPanel();
+        buildLogDisplay(panel);
+        buildOptions(panel);
+        frame.add(panel, BorderLayout.CENTER);
+    }
+
+    private void buildOptions(JPanel panel) {
+        JPanel buttonsPanel = new JPanel(new GridLayout(0, 1));
+        JButton cacheBtn = new JButton("Deactivate cache");
+        cacheBtn.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (server.isUsingCache()) {
+                    server.setUseCache(false);
+                    cacheBtn.setText("Activate cache");
+                    frame.pack();
+                } else {
+                    server.setUseCache(true);
+                    cacheBtn.setText("Deactivate cache");
+                    frame.pack();
+                }
+            }
+        });
+        JButton clearCacheBtn = new JButton("Clear cache"); //TODO clear cache
+        JButton closeWorkersBtn = new JButton("Close all workers"); //TODO close all workers
+        JButton closeClientsBtn = new JButton("Close all clients"); //TODO close all clients
+        buttonsPanel.add(cacheBtn);
+        buttonsPanel.add(clearCacheBtn);
+        buttonsPanel.add(closeWorkersBtn);
+        buttonsPanel.add(closeClientsBtn);
+        panel.add(buttonsPanel);
+    }
+
+    private void buildLogDisplay(JPanel panel){
         JLabel logLabel = new JLabel("Logs:");
         logLabel.setBorder(new EmptyBorder(5,5,5,5));
         textPane = new JTextPane();
@@ -42,11 +78,11 @@ public class ServerGUI {
         JScrollPane scrollPane = new JScrollPane(textPane);
         scrollPane.setPreferredSize(new Dimension(500, 300));
         frame.add(logLabel, BorderLayout.NORTH);
-        frame.add(scrollPane, BorderLayout.CENTER);
+        panel.add(scrollPane, BorderLayout.CENTER);
     }
 
     private void buildBottomBar(){
-        label = new JLabel("Clients connected: "+server.getClientsConnected());
+        label = new JLabel("Clients connected: "+server.getClientsConnected()+"     Workers connected: "+server.getWorkersConnected());
         label.setBorder(new EmptyBorder(5,5,5,5));
         frame.add(label, BorderLayout.SOUTH);
     }

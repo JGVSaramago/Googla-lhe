@@ -85,7 +85,7 @@ public class Server {
         }
     }
 
-    public String getDateStamp(){
+    private String getDateStamp(){
         return (new SimpleDateFormat("yyyy/MM/dd " + "HH:mm:ss")).format(new Date());
     }
 
@@ -172,6 +172,14 @@ public class Server {
 
     public synchronized void addResultFromWorker(WorkerResultMessage workerResultMessage){
         searchEngine.addResultFromWorker(workerResultMessage);
+    }
+
+    public void setUseCache(boolean useCache) {
+        searchEngine.setUseCache(useCache);
+    }
+
+    public boolean isUsingCache() {
+        return searchEngine.isUsingCache();
     }
 }
 

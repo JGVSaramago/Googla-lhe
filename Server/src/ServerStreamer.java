@@ -29,8 +29,8 @@ public class ServerStreamer extends Thread{
     private synchronized void setWorkerDisponible() {
         workerManager.setAvailable();
         if (workerManager.isAvailable()) {
-            System.out.println("      Worker " + workerManager.getID() + " now available");
-            notifyAll();
+            System.out.println("       Worker " + workerManager.getID() + " now available");
+            notify();
         }
     }
 
@@ -44,7 +44,7 @@ public class ServerStreamer extends Thread{
                     Object message = in.readObject();
                     if (message instanceof WorkerResultMessage) {
                         setWorkerDisponible();
-                        System.out.println("    Received result from worker");
+                        System.out.println("         Received result from worker");
                         server.addResultFromWorker((WorkerResultMessage) message);
                     } else if (message instanceof SetWorkerDisponibleMessage) {
                         setWorkerDisponible();

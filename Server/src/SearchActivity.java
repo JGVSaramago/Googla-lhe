@@ -5,21 +5,18 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class SearchActivity {
 
-    int counter = 0;
-
     private final int searchActivityID;
-    private ArrayList<SearchedArticle> results = new ArrayList<>();
-    private ArrayList<ArticleToSearch> pendingSearches = new ArrayList<>();
+    private final ArrayList<SearchedArticle> results = new ArrayList<>();
+    private final ArrayList<ArticleToSearch> pendingSearches = new ArrayList<>();
+    private final int articlesCount;
+    private final ServerStreamer client;
+    private final String findStr;
+
     private volatile int occurrencesFound = 0;
     private AtomicInteger filesWithOccurrences = new AtomicInteger(0);
     private String[] searchHist;
-
-    private final int articlesCount;
     private AtomicInteger articlesLeft;
     private AtomicInteger articlesReceived;
-    private ServerStreamer client;
-    private String findStr;
-    private volatile boolean waitingForAnswers = false;
 
     public SearchActivity(int searchActivityID, int articlesLeft, ServerStreamer client, String findStr, String[] searchHist) {
         this.searchActivityID = searchActivityID;
@@ -31,20 +28,8 @@ public class SearchActivity {
         articlesCount = articlesLeft;
     }
 
-    public void waitingForAnswers() {
-        waitingForAnswers = true;
-    }
-
-    public boolean isWaitingForAnswers() {
-        return waitingForAnswers;
-    }
-
     public int getSearchActivityID() {
         return searchActivityID;
-    }
-
-    public int getArticlesReceived() {
-        return articlesReceived.get();
     }
 
     public ArrayList<SearchedArticle> getResults() {
@@ -85,8 +70,6 @@ public class SearchActivity {
     }
 
     public synchronized boolean incrementArticlesReceived() {
-        counter++;
-        System.out.println("Incremented "+counter+" times.");
         if (articlesReceived.incrementAndGet() > articlesCount)
             System.out.println("SearchActivity: This should be impossible "+articlesReceived.get()+">"+articlesCount);
         if (articlesReceived.get() >= articlesCount)

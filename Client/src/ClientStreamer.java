@@ -43,6 +43,9 @@ public class ClientStreamer extends Thread {
                 } else if (message instanceof ServerUnavailableMessage){
                     client.receivedSearchAnswer();
                     System.out.println("ClientStreamer: Server unavailable.");
+                } else if (message instanceof OtherRequestMessage){
+                    if (((OtherRequestMessage) message).getType().equals(MessageType.CLOSE))
+                        client.disconnect();
                 }
             } catch (IOException e) {
                 System.out.println("ClientStreamer: Client disconnected from the server.");

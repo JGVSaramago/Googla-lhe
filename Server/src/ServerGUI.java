@@ -5,6 +5,7 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
 
 public class ServerGUI {
 
@@ -26,7 +27,7 @@ public class ServerGUI {
         frame.setVisible(true);
     }
 
-    public void addLogToGUI(String log) {
+    public synchronized void addLogToGUI(String log) {
         textPane.setText(textPane.getText().concat("\n"+log));
     }
 
@@ -59,9 +60,32 @@ public class ServerGUI {
                 }
             }
         });
-        JButton clearCacheBtn = new JButton("Clear cache"); //TODO clear cache
-        JButton closeWorkersBtn = new JButton("Close all workers"); //TODO close all workers
-        JButton closeClientsBtn = new JButton("Close all clients"); //TODO close all clients
+        JButton clearCacheBtn = new JButton("Clear cache");
+        clearCacheBtn.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                server.clearServerCache();
+                addLogToGUI(server.getDateStamp()+" - Cache cleared.");
+            }
+        });
+        JButton closeWorkersBtn = new JButton("Close all workers");
+        closeWorkersBtn.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ArrayList<ServerStreamer> workers = (ArrayList<ServerStreamer>) server.getWorkersArray().clone();
+                for (ServerStreamer worker: workers)
+                    worker.closeObject();
+            }
+        });
+        JButton closeClientsBtn = new JButton("Close all clients");
+        closeClientsBtn.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ArrayList<ServerStreamer> clients = (ArrayList<ServerStreamer>) server.getClientsArray().clone();
+                for (ServerStreamer client: clients)
+                    client.closeObject();
+            }
+        });
         buttonsPanel.add(cacheBtn);
         buttonsPanel.add(clearCacheBtn);
         buttonsPanel.add(closeWorkersBtn);

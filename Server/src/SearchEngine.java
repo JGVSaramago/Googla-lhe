@@ -36,6 +36,10 @@ public class SearchEngine {
         return useCache;
     }
 
+    public void clearCache() {
+        cacheSearchMap.clear();
+    }
+
     public void setUseCache(boolean useCache) {
         this.useCache = useCache;
     }
@@ -104,9 +108,10 @@ public class SearchEngine {
                     if (arrATS.isEmpty()) {
                         return null;
                     } else {
+                        System.out.println("- Searching pending article...");
                         ArticleToSearch ats = arrATS.get(0);
                         arrATS.remove(ats);
-                        System.out.println("Pending searches: "+arrATS.size());
+                        System.out.println("-- Pending searches left: "+arrATS.size());
                         return ats;
                     }
                 } else {

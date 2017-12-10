@@ -88,12 +88,11 @@ public class ServerStreamer extends Thread{
                 }
             }
         } catch (IOException e) {
-            System.out.println("ServerStreamer: Object not connected anymore.");
             closeConnections();
         }
     }
 
-    private void closeConnections() {
+    public void closeConnections() {
         try {
             socket.close();
             if (socket.isClosed()) {
@@ -113,6 +112,10 @@ public class ServerStreamer extends Thread{
                 server.disconnectWorker(this);
             System.out.println("ServerStreamer: Object not properly disconnected from server.");
         }
+    }
+
+    public void closeObject() {
+        sendServerMessage(new OtherRequestMessage(MessageType.CLOSE, null));
     }
 
     public void sendServerMessage(Object message) {

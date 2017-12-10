@@ -34,7 +34,15 @@ public class Server {
         return clients.size();
     }
 
-    public WorkerManager addWorker(ServerStreamer worker) {
+    public ArrayList<ServerStreamer> getWorkersArray() {
+        return workers;
+    }
+
+    public ArrayList<ServerStreamer> getClientsArray() {
+        return clients;
+    }
+
+    public synchronized WorkerManager addWorker(ServerStreamer worker) {
         workers.add(worker);
         gui.addLogToGUI(getDateStamp()+" - Worker connected.");
         gui.updateLabel();
@@ -54,7 +62,7 @@ public class Server {
         gui.updateLabel();
     }
 
-    public void addClient(ServerStreamer client) {
+    public synchronized void addClient(ServerStreamer client) {
         clients.add(client);
         gui.addLogToGUI(getDateStamp()+" - Client "+client.getUsername()+" connected.");
         gui.updateLabel();
@@ -85,7 +93,7 @@ public class Server {
         }
     }
 
-    private String getDateStamp(){
+    public String getDateStamp(){
         return (new SimpleDateFormat("yyyy/MM/dd " + "HH:mm:ss")).format(new Date());
     }
 
@@ -180,6 +188,10 @@ public class Server {
 
     public boolean isUsingCache() {
         return searchEngine.isUsingCache();
+    }
+
+    public void clearServerCache() {
+        searchEngine.clearCache();
     }
 }
 
